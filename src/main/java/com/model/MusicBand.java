@@ -12,6 +12,18 @@ public class MusicBand implements Comparable<MusicBand> {
         this.genre = null;
         this.bestAlbum = new Album("Unknown", 0.0);
     }
+
+    public static MusicBand fromString(String data) {
+        String[] parts = data.split(";");
+        String name = parts[0].trim();
+        int numberOfParticipants = Integer.parseInt(parts[1].trim());
+        MusicGenre genre = MusicGenre.valueOf(parts[2].trim());
+
+        MusicBand band = new MusicBand(name, 0, 0);
+        band.numberOfParticipants = numberOfParticipants;
+        band.genre = genre;
+        return band;
+    }
     @Override
     public int compareTo(MusicBand other) {
         return Long.compare(this.id, other.id);

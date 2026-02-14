@@ -1,5 +1,8 @@
 package com.utils;
 
+import java.awt.desktop.SystemEventListener;
+import java.util.Scanner;
+
 import com.model.MusicBand;
 
 public class CommandManager {
@@ -9,8 +12,10 @@ public class CommandManager {
                 listAllElements(heap);
                 break;
             case "A":
-                //we will add a new band with random data for testing purposes
-                MusicBand newBand = new MusicBand("New Band", 60, 600);
+                Scanner scanner = new Scanner(System.in);
+                System.out.println("Enter band details in the format: name;numberOfMembers;genre");
+                String data = scanner.nextLine();
+                MusicBand newBand = MusicBand.fromString(data);
                 addElement(heap, newBand);
                 System.out.println("Added new band: " + newBand);
                 break;
