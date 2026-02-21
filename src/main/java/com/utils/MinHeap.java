@@ -9,23 +9,30 @@ import java.util.PriorityQueue;
 
 public class MinHeap {
     private static MinHeap instance;
+    private ArrayList<String> history;
     private PriorityQueue<MusicBand> heap;
     private LocalDateTime initializationDate;
     private String heapType;
     private List<String> metadataHistory;
 
-    private MinHeap() {
+    public MinHeap() {
+        history = new ArrayList<String>();
         heap = new PriorityQueue<>();
         initializationDate = LocalDateTime.now();
         heapType = "MinHeap (PriorityQueue)";
         metadataHistory = new ArrayList<>();
         recordMetadata("Initialisation");
         // Placeholder data – consider loading from a file instead
-        heap.offer(new MusicBand("Band A", 10, 100));
-        heap.offer(new MusicBand("Band B", 20, 200));
-        heap.offer(new MusicBand("Band C", 30, 300));
-        heap.offer(new MusicBand("Band D", 40, 400));
-        heap.offer(new MusicBand("Band E", 50, 500));
+        //
+        MusicBand temp = new MusicBand();
+        temp.setName("ALPHA");
+        heap.offer(temp);
+        temp.setName("BETA");
+        heap.offer(temp);
+        temp.setName("GAMMA");
+        heap.offer(temp);
+        temp.setName("DELTA");
+        heap.offer(temp);
     }
 
     public static MinHeap getInstance() {
@@ -47,6 +54,10 @@ public class MinHeap {
         return heap.poll();
     }
 
+    public MusicBand peek() {
+        return heap.peek();
+    }
+
     public void printAll() {
         if (heap.isEmpty()) {
             System.out.println("No elements in the collection.");
@@ -58,8 +69,46 @@ public class MinHeap {
         }
     }
 
-    public void removeElById(int id) {
-        heap.removeIf(band -> band.getId() == id);
+    public boolean removeElById(Long id) {
+        return heap.removeIf(band -> band.getId() == id);
+    }
+
+    public MusicBand findById(Long id) {
+        for (MusicBand band : heap) {
+            if (band.getId() == id) {
+                return band;
+            }
+        }
+        return null;
+    }
+
+    public void updateElement(MusicBand updatedBand) {
+        heap.removeIf(band -> band.getId() == updatedBand.getId());
+        heap.offer(updatedBand);
+    }
+
+    public boolean removeElByBestAlbum(String albumName) {
+        return heap.removeIf(band -> band.getBestAlbum() != null && 
+                              band.getBestAlbum().getName().equalsIgnoreCase(albumName));
+    }
+
+    public int removeElementsGreaterThanId(Long id) {
+        int sizeBefore = heap.size();
+        heap.removeIf(band -> band.getId() > id);
+        return sizeBefore - heap.size();
+    }
+
+    public void clear() {
+        heap.clear();
+    }
+
+    public void printHistory(){
+        int start = Math.max(0, this.history.size() - 11);
+        System.out.println(new ArrayList<>(this.history.subList(start, this.history.size())));
+    }
+
+    public void addToHistory(String cmd){
+        this.history.add(cmd);
     }
 
     public LocalDateTime getInitializationDate() {

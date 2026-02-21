@@ -2,28 +2,80 @@ package com.model;
 
 
 public class MusicBand implements Comparable<MusicBand> {
-    public MusicBand(String name, int x, int y) {
+    public MusicBand() {
         this.id = java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
-        this.name = name;
-        this.coordinates = new Coordinates(x, y);
         this.creationDate = new java.util.Date();
-        this.numberOfParticipants = 0;
-        this.description = null;
-        this.genre = null;
-        this.bestAlbum = new Album("Unknown", 0.0);
     }
+        private long id; //Значение поля должно быть больше 0, Значение этого поля должно быть уникальным, Значение этого поля должно генерироваться автоматически
+        private String name; //Поле не может быть null, Строка не может быть пустой
+        private Coordinates coordinates; //Поле не может быть null
+        private java.util.Date creationDate; //Поле не может быть null, Значение этого поля должно генерироваться автоматически
+        private Integer numberOfParticipants; //Поле не может быть null, Значение поля должно быть больше 0
+        private String description; //Поле может быть null
+		private MusicGenre genre; //Поле может быть null
+        private Album bestAlbum; //Поле не может быть null
 
-    public static MusicBand fromString(String data) {
-        String[] parts = data.split(";");
-        String name = parts[0].trim();
-        int numberOfParticipants = Integer.parseInt(parts[1].trim());
-        MusicGenre genre = MusicGenre.valueOf(parts[2].trim());
+        public void setId(long id) {
+			this.id = id;
+		}
 
-        MusicBand band = new MusicBand(name, 0, 0);
-        band.numberOfParticipants = numberOfParticipants;
-        band.genre = genre;
-        return band;
-    }
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		public void setCoordinates(Coordinates coordinates) {
+			this.coordinates = coordinates;
+		}
+
+		public void setCreationDate(java.util.Date creationDate) {
+			this.creationDate = creationDate;
+		}
+
+		public void setNumberOfParticipants(Integer numberOfParticipants) {
+			this.numberOfParticipants = numberOfParticipants;
+		}
+
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		public void setGenre(MusicGenre genre) {
+			this.genre = genre;
+		}
+
+		public void setBestAlbum(Album bestAlbum) {
+			this.bestAlbum = bestAlbum;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public Coordinates getCoordinates() {
+			return coordinates;
+		}
+
+		public java.util.Date getCreationDate() {
+			return creationDate;
+		}
+
+		public Integer getNumberOfParticipants() {
+			return numberOfParticipants;
+		}
+
+		public String getDescription() {
+			return description;
+		}
+
+		public MusicGenre getGenre() {
+			return genre;
+		}
+
+		public Album getBestAlbum() {
+			return bestAlbum;
+		}
+
+
     @Override
     public int compareTo(MusicBand other) {
         return Long.compare(this.id, other.id);
@@ -41,45 +93,9 @@ public class MusicBand implements Comparable<MusicBand> {
     public int hashCode() {
         return Long.hashCode(id);
     }
-    private long id; //Значение поля должно быть больше 0, Значение этого поля должно быть уникальным, Значение этого поля должно генерироваться автоматически
-    private String name; //Поле не может быть null, Строка не может быть пустой
-    private Coordinates coordinates; //Поле не может быть null
-    private java.util.Date creationDate; //Поле не может быть null, Значение этого поля должно генерироваться автоматически
-    private Integer numberOfParticipants; //Поле не может быть null, Значение поля должно быть больше 0
-    private String description; //Поле может быть null
-    private MusicGenre genre; //Поле может быть null
-    private Album bestAlbum; //Поле не может быть null
 
     public long getId() {
         return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Coordinates getCoordinates() {
-        return coordinates;
-    }
-
-    public java.util.Date getCreationDate() {
-        return creationDate;
-    }
-
-    public Integer getNumberOfParticipants() {
-        return numberOfParticipants;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public MusicGenre getGenre() {
-        return genre;
-    }
-
-    public Album getBestAlbum() {
-        return bestAlbum;
     }
 
     @Override
