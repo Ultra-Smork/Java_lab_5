@@ -2,15 +2,19 @@ package com.utils;
 
 import com.commands.AddElementCommand;
 import com.commands.AddIfMinCommand;
+import com.commands.AverageParticipantsCommand;
 import com.commands.CleanHeapCommand;
 import com.commands.ExitCommand;
 import com.commands.ExecuteScriptCommand;
 import com.commands.HelpCommand;
 import com.commands.ListEverythingCommand;
 import com.commands.ListInfoCommand;
+import com.commands.LoadCommand;
+import com.commands.ParticipantsByIdCommand;
 import com.commands.RemoveByIdCommand;
 import com.commands.RemoveByBestAlbumCommand;
 import com.commands.RemoveGreaterThanIdCommand;
+import com.commands.SaveCommand;
 import com.commands.ShowHistoryCommand;
 import com.commands.UpdateElementCommand;
 
@@ -21,6 +25,7 @@ public class Invoker {
     ListInfoCommand listInfoCommand = new ListInfoCommand();
     AddElementCommand addElementCommand = new AddElementCommand();
     AddIfMinCommand addIfMinCommand = new AddIfMinCommand();
+    AverageParticipantsCommand averageParticipantsCommand = new AverageParticipantsCommand();
     ShowHistoryCommand printHistoryCommand = new ShowHistoryCommand();
     HelpCommand helpCommand = new HelpCommand();
     CleanHeapCommand cleanHeapCommand = new CleanHeapCommand();
@@ -28,6 +33,7 @@ public class Invoker {
     RemoveByBestAlbumCommand removeByBestAlbumCommand = new RemoveByBestAlbumCommand();
     RemoveGreaterThanIdCommand removeGreaterThanIdCommand = new RemoveGreaterThanIdCommand();
     UpdateElementCommand updateElementCommand = new UpdateElementCommand();
+    SaveCommand saveCommand = new SaveCommand();
     ExecuteScriptCommand executeScriptCommand;
 
     public void RemoveById(Long id){
@@ -62,6 +68,15 @@ public class Invoker {
         addIfMinCommand.execute();
     }
 
+    public void AverageParticipants(){
+        averageParticipantsCommand.execute();
+    }
+
+    public void ParticipantsById(Long id){
+        ParticipantsByIdCommand cmd = new ParticipantsByIdCommand(id);
+        cmd.execute();
+    }
+
     public void PrintHistory(){
         printHistoryCommand.execute();
     }
@@ -78,5 +93,19 @@ public class Invoker {
 
     public void UpdateElementWithId(Long id){
         updateElementCommand.executeWithId(id);
+    }
+
+    public void Save(){
+        saveCommand.execute();
+    }
+
+    public void Load(){
+        LoadCommand cmd = new LoadCommand();
+        cmd.execute();
+    }
+
+    public void Load(String filePath){
+        LoadCommand cmd = new LoadCommand(filePath);
+        cmd.execute();
     }
 }

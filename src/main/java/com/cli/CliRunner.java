@@ -6,11 +6,10 @@ import com.utils.Invoker;
 import com.utils.MinHeap;
 
 public class CliRunner {
-    public CliRunner(){}
     public static void start() {
         Invoker invoker = new Invoker();
         Scanner scanner = new Scanner(System.in);
-
+        invoker.Load();
         while (true){
             try {
                 System.out.print("\033[H\033[2J");

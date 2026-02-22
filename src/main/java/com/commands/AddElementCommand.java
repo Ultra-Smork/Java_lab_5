@@ -74,17 +74,20 @@ public class AddElementCommand implements Command{
 
     private MusicGenre getValidGenre(Scanner scanner) {
         while (true) {
-            System.out.println("Enter genre:");
+            System.out.println("Enter genre (or press Enter to skip):");
             System.out.println("PSYCHEDELIC_ROCK | MATH_ROCK | POST_ROCK");
-            String input = scanner.nextLine().trim().toUpperCase();
+            String input = scanner.nextLine().trim();
+            if (input.isEmpty()) {
+                return null;
+            }
             try {
-                MusicGenre genre = MusicGenre.valueOf(input);
+                MusicGenre genre = MusicGenre.valueOf(input.toUpperCase());
                 if (genre != MusicGenre.PLACEHOLDER) {
                     return genre;
                 }
                 System.out.println("Error: PLACEHOLDER is not a valid genre. Please select from the available genres.");
             } catch (IllegalArgumentException e) {
-                System.out.println("Error: Invalid genre. Please enter one of: PSYCHEDELIC_ROCK, MATH_ROCK, POST_ROCK");
+                System.out.println("Error: Invalid genre. Please enter one of: PSYCHEDELIC_ROCK, MATH_ROCK, POST_ROCK or press Enter to skip.");
             }
         }
     }

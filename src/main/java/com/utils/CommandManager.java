@@ -79,6 +79,31 @@ public class CommandManager {
             case "ADD_IF_MIN":
                 invoker.AddIfMin();
                 break;
+            case "AVG":
+                invoker.AverageParticipants();
+                break;
+            case "PRTS":
+                if (hasArgument) {
+                    try {
+                        Long id = Long.parseLong(argument);
+                        invoker.ParticipantsById(id);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Error: Invalid argument. Please provide a valid ID.");
+                    }
+                } else {
+                    System.out.println("Error: 'PRTS' command requires an argument (ID).");
+                }
+                break;
+            case "SAVE":
+                invoker.Save();
+                break;
+            case "LOAD":
+                if (hasArgument) {
+                    invoker.Load(argument);
+                } else {
+                    invoker.Load();
+                }
+                break;
 
             default:
                 System.out.println("Unknown command. Please try again.");
@@ -90,7 +115,7 @@ public class CommandManager {
             System.out.println("Error: Command cannot be empty. Please try again.");
             return false;
         }
-        String[] validCommands = {"V", "A", "S", "H", "X", "HELP", "L", "R", "RB", "U", "REMOVE_GREATER", "M", "ADD_IF_MIN"};
+        String[] validCommands = {"V", "A", "S", "H", "X", "HELP", "L", "R", "RB", "U", "REMOVE_GREATER", "M", "ADD_IF_MIN", "AVG", "PRTS", "SAVE", "LOAD"};
         String trimmed = command.trim();
         String cmdPart = trimmed.split("\\s+")[0];
         for (String valid : validCommands) {
@@ -98,7 +123,7 @@ public class CommandManager {
                 return true;
             }
         }
-            System.out.println("Error: Invalid command. Valid commands are: V, A, S, H, X, HELP, L, R, RB, U, REMOVE_GREATER, M. Please try again.");
+                System.out.println("Error: Invalid command. Valid commands are: V, A, S, H, X, HELP, L, R, RB, U, REMOVE_GREATER, M, ADD_IF_MIN, AVG, PRTS, SAVE, LOAD. Please try again.");
         return false;
     }
 }

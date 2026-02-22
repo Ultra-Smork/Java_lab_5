@@ -1,6 +1,7 @@
 package com.utils;
 
 import com.model.MusicBand;
+import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.PriorityQueue;
 
 public class MinHeap {
     private static MinHeap instance;
+    private static String defaultFilePath;
     private ArrayList<String> history;
     private PriorityQueue<MusicBand> heap;
     private LocalDateTime initializationDate;
@@ -22,17 +24,10 @@ public class MinHeap {
         heapType = "MinHeap (PriorityQueue)";
         metadataHistory = new ArrayList<>();
         recordMetadata("Initialisation");
-        // Placeholder data – consider loading from a file instead
-        //
-        MusicBand temp = new MusicBand();
-        temp.setName("ALPHA");
-        heap.offer(temp);
-        temp.setName("BETA");
-        heap.offer(temp);
-        temp.setName("GAMMA");
-        heap.offer(temp);
-        temp.setName("DELTA");
-        heap.offer(temp);
+        
+        if (defaultFilePath != null) {
+            loadFromFile();
+        }
     }
 
     public static MinHeap getInstance() {
@@ -44,6 +39,53 @@ public class MinHeap {
             }
         }
         return instance;
+    }
+
+    public static void setFilePath(String path) {
+        defaultFilePath = path;
+    }
+
+    public static String getFilePath() {
+        if (defaultFilePath == null) {
+            defaultFilePath = System.getProperty("user.home") + File.separator + ".musicheap" + File.separator + "data.txt";
+        }
+        return defaultFilePath;
+    }
+
+    public void loadFromFile() {
+        CollectionFileManager.LoadResult result = CollectionFileManager.load(getFilePath());
+        
+        if (!result.isSuccess()) {
+            System.out.println("Warning: " + result.getErrorMessage());
+            return;
+        }
+
+        heap.clear();
+        
+        if (!result.getBands().isEmpty()) {
+            heap.addAll(result.getBands());
+            System.out.println("Loaded " + result.getBands().size() + " elements from file.");
+        }
+
+        for (String warning : result.getWarnings()) {
+            System.out.println("Warning: " + warning);
+        }
+
+        recordMetadata("Loaded from file");
+    }
+
+    public void saveToFile() {
+        CollectionFileManager.SaveResult result = CollectionFileManager.save(
+            new ArrayList<>(heap), 
+            getFilePath()
+        );
+        
+        if (result.isSuccess()) {
+            System.out.println("Saved " + result.getSavedCount() + " elements to file: " + getFilePath());
+            recordMetadata("Saved to file");
+        } else {
+            System.out.println("Error: " + result.getErrorMessage());
+        }
     }
 
     public void insert(MusicBand band) {
@@ -127,6 +169,10 @@ public class MinHeap {
         return heap.isEmpty();
     }
 
+    public List<MusicBand> getAllElements() {
+        return new ArrayList<>(heap);
+    }
+
     public List<String> getMetadataHistory() {
         return new ArrayList<>(metadataHistory);
     }
@@ -146,6 +192,7 @@ public class MinHeap {
         System.out.println("Date of Initialization: " + initializationDate.format(formatter));
         System.out.println("Amount of Elements: " + heap.size());
         System.out.println("Is Empty: " + heap.isEmpty());
+        System.out.println("Save File Path: " + getFilePath());
         System.out.println("\n--- Metadata History ---");
         for (String entry : metadataHistory) {
             System.out.println(entry);

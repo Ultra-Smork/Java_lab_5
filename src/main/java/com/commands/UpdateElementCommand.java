@@ -95,15 +95,23 @@ public class UpdateElementCommand implements Command {
 
     private MusicGenre getGenreInputWithDefault(Scanner scanner, MusicGenre defaultValue) {
         while (true) {
-            System.out.print("Genre [PSYCHEDELIC_ROCK | MATH_ROCK | POST_ROCK] [" + defaultValue + "]: ");
+            String defaultStr = defaultValue != null ? defaultValue.toString() : "null";
+            System.out.print("Genre [PSYCHEDELIC_ROCK | MATH_ROCK | POST_ROCK] [current: " + defaultStr + ", Enter to keep, 'null' to remove]: ");
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) {
                 return defaultValue;
             }
+            if (input.equalsIgnoreCase("null")) {
+                return null;
+            }
             try {
-                return MusicGenre.valueOf(input.toUpperCase());
+                MusicGenre genre = MusicGenre.valueOf(input.toUpperCase());
+                if (genre != MusicGenre.PLACEHOLDER) {
+                    return genre;
+                }
+                System.out.println("Error: PLACEHOLDER is not a valid genre.");
             } catch (IllegalArgumentException e) {
-                System.out.println("Error: Invalid genre. Please enter one of: PSYCHEDELIC_ROCK, MATH_ROCK, POST_ROCK");
+                System.out.println("Error: Invalid genre. Please enter one of: PSYCHEDELIC_ROCK, MATH_ROCK, POST_ROCK, or 'null' to remove.");
             }
         }
     }

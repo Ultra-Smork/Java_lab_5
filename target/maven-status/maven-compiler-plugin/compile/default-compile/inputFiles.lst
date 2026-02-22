@@ -2,6 +2,7 @@
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/cli/CliRunner.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AddElementCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AddIfMinCommand.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AverageParticipantsCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/CleanHeapCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ExecuteScriptCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ExitCommand.java
@@ -9,15 +10,19 @@
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ListEverythingCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ListInfoCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ListMetaData.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/LoadCommand.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ParticipantsByIdCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/RemoveByBestAlbumCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/RemoveByIdCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/RemoveGreaterThanIdCommand.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/SaveCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ShowHistoryCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/UpdateElementCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/Album.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/Coordinates.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/MusicBand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/MusicGenre.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/utils/CollectionFileManager.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/utils/Command.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/utils/CommandManager.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/utils/Invoker.java
