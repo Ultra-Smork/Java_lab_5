@@ -18,6 +18,7 @@ com/commands/LoadCommand.class
 com/commands/HelpCommand.class
 com/utils/ScriptInputStream.class
 com/commands/ExitCommand.class
+com/commands/CountByParticipantsCommand.class
 com/utils/CollectionFileManager.class
 com/utils/CollectionFileManager$LoadResult.class
 com/commands/ShowHistoryCommand.class

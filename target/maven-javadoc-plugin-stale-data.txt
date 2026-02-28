@@ -1,0 +1,45 @@
+-J-Duser.language=
+-J-Duser.country=
+@options
+@packages
+--no-fonts
+-encoding
+'UTF-8'
+-protected
+-sourcepath
+'/home/ultrasmork/playground/java/java2/my-app/src/main/java'
+-author
+-bottom
+'Copyright &#169; 2026. All rights reserved.'
+-charset
+'UTF-8'
+-d
+'/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs'
+-docencoding
+'UTF-8'
+-doctitle
+'my-app 1.0-SNAPSHOT API'
+-use
+-version
+-windowtitle
+'my-app 1.0-SNAPSHOT API'
+com
+com.model
+com.utils
+com.commands
+com.cli
+/home/ultrasmork/playground/java/java2/my-app/src/main/java = 1771014610610
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/help-doc.html = 1772262716622
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/allpackages-index.html = 1772262716421
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/member-search-index.js = 1772262716434
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/type-search-index.js = 1772262716427
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/overview-summary.html = 1772262716615
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/search.html = 1772262716610
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/element-list = 1772262715871
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/index-all.html = 1772262716605
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/tag-search-index.js = 1772262716436
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/package-search-index.js = 1772262716425
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/overview-tree.html = 1772262716322
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/index.html = 1772262716333
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/allclasses-index.html = 1772262716415
+/home/ultrasmork/playground/java/java2/my-app/target/reports/apidocs/module-search-index.js = 1772262716423

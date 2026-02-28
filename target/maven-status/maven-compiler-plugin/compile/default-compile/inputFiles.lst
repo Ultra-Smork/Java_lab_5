@@ -4,6 +4,7 @@
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AddIfMinCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AverageParticipantsCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/CleanHeapCommand.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/CountByParticipantsCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ExecuteScriptCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/ExitCommand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/HelpCommand.java

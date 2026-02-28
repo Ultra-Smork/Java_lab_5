@@ -4,7 +4,41 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="384594ea-97da-48df-9c72-d91e8fa2f91e" name="Changes" comment="" />
+    <list default="true" id="384594ea-97da-48df-9c72-d91e8fa2f91e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/utils/CollectionFileManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/utils/CollectionFileManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/utils/MinHeap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/utils/MinHeap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/App.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/App.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/cli/CliRunner.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/cli/CliRunner.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/AddElementCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/AddElementCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/AddIfMinCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/AddIfMinCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/AverageParticipantsCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/AverageParticipantsCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/CleanHeapCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/CleanHeapCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ExitCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ExitCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ListEverythingCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ListEverythingCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ListInfoCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ListInfoCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ListMetaData.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ListMetaData.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/LoadCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/LoadCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ParticipantsByIdCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ParticipantsByIdCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/RemoveByBestAlbumCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/RemoveByBestAlbumCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/RemoveByIdCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/RemoveByIdCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/RemoveGreaterThanIdCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/RemoveGreaterThanIdCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/SaveCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/SaveCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/ShowHistoryCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/ShowHistoryCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/commands/UpdateElementCommand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/commands/UpdateElementCommand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/model/Album.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/model/Album.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/model/Coordinates.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/model/Coordinates.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/model/MusicBand.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/model/MusicBand.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/model/MusicGenre.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/model/MusicGenre.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager$LoadResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager$LoadResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager$SaveResult.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager$SaveResult.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/CollectionFileManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/CommandManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/CommandManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/Invoker.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/Invoker.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/MinHeap.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/MinHeap.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/ScriptInputStream.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/ScriptInputStream.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/my-app-1.0-SNAPSHOT.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/com/example/AppTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/test-classes/com/example/AppTest.class" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,9 +47,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="39dTPW4Ka68TlRyFYVY8pGoRZJn" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -29,7 +63,8 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "master",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/ultrasmork/playground/java/java2/my-app",
+    "last_opened_file_path": "/home/ultrasmork/CHEEEEL",
+    "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -37,6 +72,7 @@
     <attachedChunks>
       <set>
         <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.30387.90" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.30387.90" />
       </set>
     </attachedChunks>
   </component>
@@ -48,6 +84,7 @@
       <option name="presentableId" value="Default" />
       <updated>1771024927688</updated>
       <workItem from="1771024948010" duration="219000" />
+      <workItem from="1772256553798" duration="24000" />
     </task>
     <servers />
   </component>
