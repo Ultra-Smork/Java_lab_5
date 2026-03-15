@@ -191,6 +191,6 @@ public class AddElementCommand implements Command{
         newBand.setBestAlbum(album);
 
         heap.insert(newBand);
-        System.out.println("Added new band: " + newBand);
+        System.out.println("Added new band: \n" + newBand);
     }
 }

@@ -61,7 +61,7 @@ public class CollectionFileManager {
                 sb.append("numberOfParticipants").append(FIELD_DELIMITER).append(band.getNumberOfParticipants() != null ? band.getNumberOfParticipants() : "").append("\n");
                 sb.append("description").append(FIELD_DELIMITER).append(escapeValue(band.getDescription())).append("\n");
                 sb.append("genre").append(FIELD_DELIMITER).append(band.getGenre() != null ? band.getGenre().name() : "").append("\n");
-                
+
                 if (band.getBestAlbum() != null) {
                     sb.append("album_name").append(FIELD_DELIMITER).append(escapeValue(band.getBestAlbum().getName())).append("\n");
                     sb.append("album_sales").append(FIELD_DELIMITER).append(band.getBestAlbum().getSales() != null ? band.getBestAlbum().getSales() : "").append("\n");
@@ -107,162 +107,96 @@ public class CollectionFileManager {
 
         List<MusicBand> bands = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
+        
+        int corruptedEntries = 0;
+        int totalLinesRead = 0;
 
-        try (Scanner scanner = new Scanner(file, "UTF-8")) {
-            MusicBand currentBand = null;
-            String currentAlbumName = null;
-            String currentAlbumSales = null;
-            int lineNumber = 0;
+        try {
+            List<String> allLines = new java.util.ArrayList<>();
+            try (Scanner scanner = new Scanner(file, "UTF-8")) {
+                while (scanner.hasNextLine()) {
+                    allLines.add(scanner.nextLine());
+                    totalLinesRead++;
+                }
+            }
 
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                lineNumber++;
+            int i = 0;
+            boolean corruptionDetected = false;
+            boolean inRecoveryMode = false;
+            
+            while (i < allLines.size()) {
+                String line = allLines.get(i);
+                i++;
+                totalLinesRead++;
 
-                if (line.trim().isEmpty()) {
+                if (line == null || line.trim().isEmpty()) {
                     continue;
                 }
 
                 if (line.trim().equals(BAND_DELIMITER)) {
-                    if (currentBand != null) {
-                        if (currentAlbumName != null && !currentAlbumName.isEmpty()) {
-                            try {
-                                Album album = new Album(
-                                    unescapeValue(currentAlbumName),
-                                    currentAlbumSales != null && !currentAlbumSales.isEmpty() ? Double.parseDouble(currentAlbumSales) : 0.0
-                                );
-                                if (album.getSales() <= 0) {
-                                    warnings.add("Line " + lineNumber + ": Invalid album sales, skipping album.");
-                                } else {
-                                    currentBand.setBestAlbum(album);
-                                }
-                            } catch (NumberFormatException e) {
-                                warnings.add("Line " + lineNumber + ": Invalid album sales format.");
-                            }
-                        }
-
-                        if (validateBand(currentBand)) {
-                            bands.add(currentBand);
-                        } else {
-                            warnings.add("Line " + lineNumber + ": Invalid band data, skipping.");
-                        }
-                    }
-                    currentBand = null;
-                    currentAlbumName = null;
-                    currentAlbumSales = null;
+                    inRecoveryMode = false;
                     continue;
                 }
 
                 String[] parts = line.split(FIELD_DELIMITER, 2);
                 if (parts.length != 2) {
+                    if (!inRecoveryMode && !corruptionDetected) {
+                        int nextDelimiter = findNextDelimiter(allLines, i);
+                        if (nextDelimiter - i > 10) {
+                            corruptionDetected = true;
+                            inRecoveryMode = true;
+                            warnings.add("Warning: File appears corrupted at line " + totalLinesRead + ". Attempting to recover...");
+                            i = nextDelimiter + 1;
+                        }
+                    }
                     continue;
                 }
 
                 String key = parts[0].trim();
                 String value = parts[1];
 
-                if (currentBand == null) {
-                    currentBand = new MusicBand();
+                if (!key.equals("id")) {
+                    if (!inRecoveryMode) {
+                        int nextDelimiter = findNextDelimiter(allLines, i);
+                        if (nextDelimiter - i > 10) {
+                            corruptionDetected = true;
+                            inRecoveryMode = true;
+                            warnings.add("Warning: File appears corrupted at line " + totalLinesRead + ". Attempting to recover...");
+                            i = nextDelimiter + 1;
+                        }
+                    }
+                    continue;
                 }
 
-                try {
-                    switch (key) {
-                        case "id":
-                            long id = Long.parseLong(value);
-                            if (id <= 0) {
-                                warnings.add("Line " + lineNumber + ": Invalid ID, must be > 0.");
-                            }
-                            currentBand.setId(id);
-                            break;
-                        case "name":
-                            String name = unescapeValue(value);
-                            if (name == null || name.isEmpty()) {
-                                warnings.add("Line " + lineNumber + ": Name cannot be empty.");
-                            }
-                            currentBand.setName(name);
-                            break;
-                        case "x":
-                            if (!value.isEmpty()) {
-                                long x = Long.parseLong(value);
-                                if (x > 554) {
-                                    warnings.add("Line " + lineNumber + ": X coordinate > 554, will be rejected.");
-                                }
-                                if (currentBand.getCoordinates() == null) {
-                                    currentBand.setCoordinates(new Coordinates(x, 0));
-                                } else {
-                                    currentBand.setCoordinates(new Coordinates(x, currentBand.getCoordinates().getY()));
-                                }
-                            }
-                            break;
-                        case "y":
-                            if (!value.isEmpty()) {
-                                int y = Integer.parseInt(value);
-                                if (y > 782) {
-                                    warnings.add("Line " + lineNumber + ": Y coordinate > 782, will be rejected.");
-                                }
-                                if (currentBand.getCoordinates() == null) {
-                                    currentBand.setCoordinates(new Coordinates(0L, y));
-                                } else {
-                                    currentBand.setCoordinates(new Coordinates(currentBand.getCoordinates().getX(), y));
-                                }
-                            }
-                            break;
-                        case "numberOfParticipants":
-                            if (!value.isEmpty()) {
-                                int participants = Integer.parseInt(value);
-                                if (participants <= 0) {
-                                    warnings.add("Line " + lineNumber + ": Number of participants must be > 0.");
-                                }
-                                currentBand.setNumberOfParticipants(participants);
-                            }
-                            break;
-                        case "description":
-                            currentBand.setDescription(value.isEmpty() ? null : unescapeValue(value));
-                            break;
-                        case "genre":
-                            if (!value.isEmpty()) {
-                                try {
-                                    MusicGenre genre = MusicGenre.valueOf(value);
-                                    if (genre != MusicGenre.PLACEHOLDER) {
-                                        currentBand.setGenre(genre);
-                                    }
-                                } catch (IllegalArgumentException e) {
-                                    warnings.add("Line " + lineNumber + ": Invalid genre '" + value + "'.");
-                                }
-                            }
-                            break;
-                        case "album_name":
-                            currentAlbumName = value;
-                            break;
-                        case "album_sales":
-                            currentAlbumSales = value;
-                            break;
+                int bandStart = i - 1;
+                int bandEnd = findNextDelimiter(allLines, i);
+                
+                MusicBand band = parseBandFromLines(allLines, bandStart, bandEnd + 1, totalLinesRead, warnings);
+                
+                if (band != null && validateBand(band)) {
+                    if (inRecoveryMode) {
+                        inRecoveryMode = false;
+                        warnings.add("Warning: Successfully recovered valid entry at line " + totalLinesRead + ".");
                     }
-                } catch (NumberFormatException e) {
-                    warnings.add("Line " + lineNumber + ": Invalid number format for '" + key + "'.");
+                    bands.add(band);
+                } else {
+                    corruptedEntries++;
+                    if (!inRecoveryMode) {
+                        inRecoveryMode = true;
+                        warnings.add("Warning: Corrupted entry detected at line " + totalLinesRead + ". Skipping to next valid entry...");
+                    }
                 }
+                
+                i = bandEnd + 1;
             }
 
-            if (currentBand != null) {
-                if (currentAlbumName != null && !currentAlbumName.isEmpty()) {
-                    try {
-                        Album album = new Album(
-                            unescapeValue(currentAlbumName),
-                            currentAlbumSales != null && !currentAlbumSales.isEmpty() ? Double.parseDouble(currentAlbumSales) : 0.0
-                        );
-                        if (album.getSales() <= 0) {
-                            warnings.add("Line " + lineNumber + ": Invalid album sales, skipping album.");
-                        } else {
-                            currentBand.setBestAlbum(album);
-                        }
-                    } catch (NumberFormatException e) {
-                        warnings.add("Line " + lineNumber + ": Invalid album sales format.");
-                    }
+            if (corruptionDetected) {
+                warnings.add("Warning: File parsing complete. Recovered " + bands.size() + " valid entries out of " + (bands.size() + corruptedEntries) + " total.");
+                if (corruptedEntries > 0) {
+                    warnings.add("Warning: Skipped " + corruptedEntries + " corrupted entries.");
                 }
-
-                if (validateBand(currentBand)) {
-                    bands.add(currentBand);
-                } else {
-                    warnings.add("Line " + lineNumber + ": Invalid band data, skipping.");
+                if (bands.isEmpty()) {
+                    warnings.add("Warning: No valid entries found in file. Starting with empty collection.");
                 }
             }
 
@@ -273,6 +207,144 @@ public class CollectionFileManager {
         }
 
         return LoadResult.success(bands, warnings);
+    }
+
+    private static int findNextDelimiter(List<String> lines, int startIndex) {
+        for (int i = startIndex; i < lines.size(); i++) {
+            if (lines.get(i).trim().equals(BAND_DELIMITER)) {
+                return i;
+            }
+        }
+        return lines.size();
+    }
+
+    private static MusicBand parseBandFromLines(List<String> lines, int startLine, int endLine, int baseLineNumber, List<String> warnings) {
+        MusicBand band = new MusicBand();
+        String currentAlbumName = null;
+        String currentAlbumSales = null;
+        
+        for (int i = startLine; i < endLine && i < lines.size(); i++) {
+            String line = lines.get(i);
+            int lineNumber = baseLineNumber + (i - startLine);
+
+            if (line.trim().isEmpty() || line.trim().equals(BAND_DELIMITER)) {
+                continue;
+            }
+
+            String[] parts = line.split(FIELD_DELIMITER, 2);
+            if (parts.length != 2) {
+                continue;
+            }
+
+            String key = parts[0].trim();
+            String value = parts[1];
+
+            try {
+                switch (key) {
+                    case "id":
+                        long id = Long.parseLong(value);
+                        if (id <= 0) {
+                            warnings.add("Line " + lineNumber + ": Invalid ID, must be > 0.");
+                            return null;
+                        }
+                        band.setId(id);
+                        break;
+                    case "name":
+                        String name = unescapeValue(value);
+                        if (name == null || name.isEmpty()) {
+                            warnings.add("Line " + lineNumber + ": Name cannot be empty.");
+                            return null;
+                        }
+                        band.setName(name);
+                        break;
+                    case "x":
+                        if (!value.isEmpty()) {
+                            try {
+                                long x = Long.parseLong(value);
+                                if (x > 554) {
+                                    warnings.add("Line " + lineNumber + ": X coordinate > 554, will be rejected.");
+                                    band.setCoordinates(new Coordinates(0L, 0));
+                                } else {
+                                    band.setCoordinates(new Coordinates(x, 0));
+                                }
+                            } catch (IllegalArgumentException e) {
+                                band.setCoordinates(new Coordinates(0L, 0));
+                            }
+                        }
+                        break;
+                    case "y":
+                        if (!value.isEmpty()) {
+                            try {
+                                int y = Integer.parseInt(value);
+                                if (y > 782) {
+                                    warnings.add("Line " + lineNumber + ": Y coordinate > 782, will be rejected.");
+                                }
+                                if (band.getCoordinates() != null) {
+                                    band.setCoordinates(new Coordinates(band.getCoordinates().getX(), y));
+                                } else {
+                                    band.setCoordinates(new Coordinates(0L, y));
+                                }
+                            } catch (IllegalArgumentException e) {
+                                if (band.getCoordinates() != null) {
+                                    band.setCoordinates(new Coordinates(band.getCoordinates().getX(), 0));
+                                } else {
+                                    band.setCoordinates(new Coordinates(0L, 0));
+                                }
+                            }
+                        }
+                        break;
+                    case "numberOfParticipants":
+                        if (!value.isEmpty()) {
+                            int participants = Integer.parseInt(value);
+                            if (participants <= 0) {
+                                warnings.add("Line " + lineNumber + ": Number of participants must be > 0.");
+                                return null;
+                            }
+                            band.setNumberOfParticipants(participants);
+                        }
+                        break;
+                    case "description":
+                        band.setDescription(value.isEmpty() ? null : unescapeValue(value));
+                        break;
+                    case "genre":
+                        if (!value.isEmpty()) {
+                            try {
+                                MusicGenre genre = MusicGenre.valueOf(value);
+                                if (genre != MusicGenre.PLACEHOLDER) {
+                                    band.setGenre(genre);
+                                }
+                            } catch (IllegalArgumentException e) {
+                                warnings.add("Line " + lineNumber + ": Invalid genre '" + value + "'.");
+                            }
+                        }
+                        break;
+                    case "album_name":
+                        currentAlbumName = value;
+                        break;
+                    case "album_sales":
+                        currentAlbumSales = value;
+                        break;
+                }
+            } catch (NumberFormatException e) {
+                warnings.add("Line " + lineNumber + ": Invalid number format for '" + key + "'.");
+                return null;
+            }
+        }
+
+        if (currentAlbumName != null && !currentAlbumName.isEmpty()) {
+            try {
+                double sales = currentAlbumSales != null && !currentAlbumSales.isEmpty() ? Double.parseDouble(currentAlbumSales) : 0.0;
+                if (sales <= 0) {
+                    warnings.add("Warning: Invalid album sales, skipping album.");
+                } else {
+                    band.setBestAlbum(new Album(unescapeValue(currentAlbumName), sales));
+                }
+            } catch (NumberFormatException e) {
+                warnings.add("Warning: Invalid album sales format.");
+            }
+        }
+
+        return band;
     }
 
     /**
@@ -518,14 +590,14 @@ public class CollectionFileManager {
          * @return true if successful, false otherwise
          */
         public boolean isSuccess() { return success; }
-        
+
         /**
          * Gets the error message if the operation failed.
          *
          * @return the error message, or null if successful
          */
         public String getErrorMessage() { return errorMessage; }
-        
+
         /**
          * Gets the number of bands that were saved.
          *
@@ -589,21 +661,21 @@ public class CollectionFileManager {
          * @return true if successful, false otherwise
          */
         public boolean isSuccess() { return success; }
-        
+
         /**
          * Gets the error message if the operation failed.
          *
          * @return the error message, or null if successful
          */
         public String getErrorMessage() { return errorMessage; }
-        
+
         /**
          * Gets the list of music bands that were loaded.
          *
          * @return the list of bands
          */
         public List<MusicBand> getBands() { return bands; }
-        
+
         /**
          * Gets the list of warnings encountered during loading.
          *

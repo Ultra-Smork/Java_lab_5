@@ -1,12 +1,16 @@
 package com.model;
 
+import java.io.Serializable;
+
 /**
  * Represents a music band with all its attributes.
  * This class implements Comparable to allow sorting by ID.
  * Each MusicBand has a unique ID, name, coordinates, creation date,
  * number of participants, description, genre, and best album information.
+ * Implements Serializable for client-server communication.
  */
-public class MusicBand implements Comparable<MusicBand> {
+public class MusicBand implements Comparable<MusicBand>, Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * Constructs a new MusicBand with a randomly generated unique ID
      * and automatically set creation date.
@@ -177,7 +181,7 @@ public class MusicBand implements Comparable<MusicBand> {
      */
     @Override
     public int compareTo(MusicBand other) {
-        return Long.compare(this.id, other.id);
+        return this.name.compareTo(other.name);
     }
 
     /**

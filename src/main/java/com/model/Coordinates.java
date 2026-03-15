@@ -1,10 +1,14 @@
 package com.model;
 
+import java.io.Serializable;
+
 /**
  * Represents a 2D coordinate system with x and y values.
  * Used to store the geographical coordinates of a music band's origin location.
+ * Implements Serializable for client-server communication.
  */
-public class Coordinates {
+public class Coordinates implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * Constructs a new Coordinates object with the specified x and y values.

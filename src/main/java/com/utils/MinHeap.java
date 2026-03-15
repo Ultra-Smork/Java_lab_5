@@ -32,6 +32,8 @@ public class MinHeap {
     private String heapType;
     /** History of metadata changes to the collection */
     private List<String> metadataHistory;
+    /** Warnings collected during startup load to display after screen clear */
+    private List<String> startupWarnings;
 
     /**
      * Constructs a new MinHeap instance.
@@ -44,9 +46,10 @@ public class MinHeap {
         initializationDate = LocalDateTime.now();
         heapType = "MinHeap (PriorityQueue)";
         metadataHistory = new ArrayList<>();
+        startupWarnings = new ArrayList<>();
         recordMetadata("Initialisation");
         
-        loadFromFile();
+        loadFromFileSilently();
     }
 
     /**
@@ -123,6 +126,30 @@ public class MinHeap {
         }
     }
 
+    public void saveToFileSilently() {
+        String filePath = CollectionFileManager.getFirstWritablePath();
+        CollectionFileManager.save(new ArrayList<>(heap), filePath);
+    }
+
+    public void loadFromFileSilently() {
+        String filePath = CollectionFileManager.getFirstValidPath();
+        CollectionFileManager.LoadResult result = CollectionFileManager.load(filePath);
+        
+        if (!result.isSuccess()) {
+            return;
+        }
+
+        heap.clear();
+        
+        if (!result.getBands().isEmpty()) {
+            heap.addAll(result.getBands());
+        }
+        
+        for (String warning : result.getWarnings()) {
+            startupWarnings.add(warning);
+        }
+    }
+
     /**
      * Inserts a new music band into the collection.
      *
@@ -130,6 +157,7 @@ public class MinHeap {
      */
     public void insert(MusicBand band) {
         heap.offer(band);
+        saveToFileSilently();
     }
 
     /**
@@ -138,7 +166,11 @@ public class MinHeap {
      * @return the minimum MusicBand, or null if the collection is empty
      */
     public MusicBand extractMin() {
-        return heap.poll();
+        MusicBand result = heap.poll();
+        if (result != null) {
+            saveToFileSilently();
+        }
+        return result;
     }
 
     /**
@@ -172,7 +204,11 @@ public class MinHeap {
      * @return true if an element was removed, false otherwise
      */
     public boolean removeElById(Long id) {
-        return heap.removeIf(band -> band.getId() == id);
+        boolean removed = heap.removeIf(band -> band.getId() == id);
+        if (removed) {
+            saveToFileSilently();
+        }
+        return removed;
     }
 
     /**
@@ -199,6 +235,7 @@ public class MinHeap {
     public void updateElement(MusicBand updatedBand) {
         heap.removeIf(band -> band.getId() == updatedBand.getId());
         heap.offer(updatedBand);
+        saveToFileSilently();
     }
 
     /**
@@ -209,8 +246,12 @@ public class MinHeap {
      * @return true if an element was removed, false otherwise
      */
     public boolean removeElByBestAlbum(String albumName) {
-        return heap.removeIf(band -> band.getBestAlbum() != null && 
+        boolean removed = heap.removeIf(band -> band.getBestAlbum() != null && 
                               band.getBestAlbum().getName().equalsIgnoreCase(albumName));
+        if (removed) {
+            saveToFileSilently();
+        }
+        return removed;
     }
 
     /**
@@ -222,7 +263,11 @@ public class MinHeap {
     public int removeElementsGreaterThanId(Long id) {
         int sizeBefore = heap.size();
         heap.removeIf(band -> band.getId() > id);
-        return sizeBefore - heap.size();
+        int removed = sizeBefore - heap.size();
+        if (removed > 0) {
+            saveToFileSilently();
+        }
+        return removed;
     }
 
     /**
@@ -230,6 +275,7 @@ public class MinHeap {
      */
     public void clear() {
         heap.clear();
+        saveToFileSilently();
     }
 
     /**
@@ -332,6 +378,12 @@ public class MinHeap {
         String entry = String.format("[%s] %s - Elements: %d",
             now.format(formatter), action, heap.size());
         metadataHistory.add(entry);
+    }
+
+    public List<String> getAndClearStartupWarnings() {
+        List<String> warnings = new ArrayList<>(startupWarnings);
+        startupWarnings.clear();
+        return warnings;
     }
 
     /**

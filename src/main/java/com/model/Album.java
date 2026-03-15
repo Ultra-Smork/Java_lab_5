@@ -1,11 +1,15 @@
 package com.model;
 
+import java.io.Serializable;
+
 /**
  * Represents an album with a name and sales figure.
  * This class is used as part of the MusicBand model to store information
  * about a band's best-selling album.
+ * Implements Serializable for client-server communication.
  */
-public class Album {
+public class Album implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * Constructs a new Album with the specified name and sales figure.
      *

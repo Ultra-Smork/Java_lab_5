@@ -109,13 +109,66 @@ public class ExecuteScriptCommand implements Command {
     }
 
     /**
-     * Resolves the full path to a script file by searching in common locations.
-     * Searches in scripts directories relative to the current working directory.
+     * Resolves the full path to a script file.
+     * 
+     * Resolution logic:
+     * - Absolute paths: validate exists + readable
+     * - Paths starting with ~: resolve to home directory, validate
+     * - Relative paths with dots (./, ../): resolve from CWD, validate
+     * - Short names (no dots): only search in predetermined directories
      *
      * @param path the file name or relative path to resolve
      * @return the full path to the script file, or null if not found
      */
     private String resolveScriptPath(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            return null;
+        }
+
+        String trimmedPath = path.trim();
+        
+        // Check if path is absolute, starts with ~, or has dot (./ or ../)
+        boolean isAbsolute = new File(trimmedPath).isAbsolute();
+        boolean startsWithTilde = trimmedPath.startsWith("~");
+        boolean hasDotPrefix = trimmedPath.startsWith("./") || trimmedPath.startsWith("../") || 
+                               trimmedPath.startsWith(".\\") || trimmedPath.startsWith("..\\");
+        
+        if (isAbsolute || startsWithTilde || hasDotPrefix) {
+            // Handle absolute, ~, or dot-prefixed paths
+            String resolvedPath;
+            if (startsWithTilde) {
+                resolvedPath = com.utils.CollectionFileManager.resolvePath(trimmedPath);
+            } else if (hasDotPrefix) {
+                resolvedPath = new File(trimmedPath).getAbsolutePath();
+            } else {
+                resolvedPath = trimmedPath;
+            }
+            
+            if (resolvedPath == null) {
+                return null;
+            }
+            
+            File file = new File(resolvedPath);
+            
+            if (!file.exists()) {
+                System.out.println("Error: Script file not found: " + resolvedPath);
+                return null;
+            }
+            
+            if (!file.isFile()) {
+                System.out.println("Error: Path is not a file: " + resolvedPath);
+                return null;
+            }
+            
+            if (!file.canRead()) {
+                System.out.println("Error: Script file is not readable: " + resolvedPath);
+                return null;
+            }
+            
+            return resolvedPath;
+        }
+        
+        // For short names (no dots), search in predetermined directories
         String userDir = System.getProperty("user.dir");
         String[] possiblePaths = {
             "scripts",
@@ -128,12 +181,9 @@ public class ExecuteScriptCommand implements Command {
             "../../src/main/java/com/scripts"
         };
 
-        String fileName = path;
-        if (path.contains("/") || path.contains("\\")) {
-            fileName = path.substring(path.lastIndexOf('/') + 1);
-            if (fileName.isEmpty()) {
-                fileName = path.substring(path.lastIndexOf('\\') + 1);
-            }
+        String fileName = trimmedPath;
+        if (trimmedPath.contains("/") || trimmedPath.contains("\\")) {
+            fileName = trimmedPath.substring(Math.max(trimmedPath.lastIndexOf('/'), trimmedPath.lastIndexOf('\\')) + 1);
         }
 
         for (String basePath : possiblePaths) {
@@ -155,6 +205,7 @@ public class ExecuteScriptCommand implements Command {
             }
         }
 
+        System.out.println("Error: Script file not found: " + path);
         return null;
     }
 

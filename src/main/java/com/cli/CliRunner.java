@@ -19,11 +19,17 @@ public class CliRunner {
     public static void start() {
         Invoker invoker = new Invoker();
         Scanner scanner = new Scanner(System.in);
-        invoker.Load();
+        MinHeap heap = MinHeap.getInstance();
+        
         while (true){
             try {
                 System.out.print("\033[H\033[2J");
                 System.out.flush();
+                
+                for (String warning : heap.getAndClearStartupWarnings()) {
+                    System.out.println(warning);
+                }
+                
                 invoker.PrintHelp();
                 String input = scanner.nextLine().trim();
                 if (input.isEmpty()) {
