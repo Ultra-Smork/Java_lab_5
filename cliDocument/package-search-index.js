@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html","k":"18"},{"l":"com"},{"l":"com.cli"},{"l":"com.client"},{"l":"com.client.network"},{"l":"com.commands"},{"l":"com.common"},{"l":"com.example"},{"l":"com.model"},{"l":"com.server"},{"l":"com.server.network"},{"l":"com.utils"}];updateSearchResults();

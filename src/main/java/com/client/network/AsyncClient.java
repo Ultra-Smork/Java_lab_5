@@ -247,11 +247,7 @@ public class AsyncClient {
         if (channel == null) {
             return false;
         }
-        try {
-            return channel.isOpen();
-        } catch (IOException e) {
-            return false;
-        }
+        return channel.isOpen();
     }
 
     /**
