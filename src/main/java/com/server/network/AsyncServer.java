@@ -157,7 +157,7 @@ public class AsyncServer {
                         Request request = Serializer.deserialize(data);
                         
                         // Process the request and get response with client info
-                        Response response = requestHandler.handle(request, clientInfo);
+                        Response response = requestHandler.handle(request, clientInfo, clientChannel);
                         
                         // Serialize the response
                         byte[] responseData = Serializer.serialize(response);
@@ -234,7 +234,7 @@ public class AsyncServer {
                     attachment.get(data);
                     try {
                         Request request = Serializer.deserialize(data);
-                        Response response = requestHandler.handle(request, clientInfo);
+                        Response response = requestHandler.handle(request, clientInfo, clientChannel);
                         byte[] responseData = Serializer.serialize(response);
                         ByteBuffer responseBuffer = ByteBuffer.wrap(responseData);
                         clientChannel.write(responseBuffer, responseBuffer, new CompletionHandler<Integer, ByteBuffer>() {
@@ -367,5 +367,23 @@ public class AsyncServer {
      */
     public int getPort() {
         return port;
+    }
+
+    public void broadcastNotification(String message, AsynchronousSocketChannel excludeClient) {
+        for (AsynchronousSocketChannel client : clients) {
+            if (client != excludeClient && client.isOpen()) {
+                try {
+                    Response notification = Response.notification(message);
+                    byte[] data = Serializer.serialize(notification);
+                    ByteBuffer buffer = ByteBuffer.wrap(data);
+                    client.write(buffer, null, new CompletionHandler<Integer, Void>() {
+                        @Override
+                        public void completed(Integer written, Void attachment) {}
+                        @Override
+                        public void failed(Throwable exc, Void attachment) {}
+                    });
+                } catch (Exception e) {}
+            }
+        }
     }
 }

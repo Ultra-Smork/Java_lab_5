@@ -99,6 +99,8 @@ public class Request implements Serializable {
         /** Upload a file to the server */
         FILE_UPLOAD,
         /** Download a file from the server */
-        FILE_DOWNLOAD
+        FILE_DOWNLOAD,
+        /** Execute SQL query on the database */
+        EXECUTE_SQL
     }
 }

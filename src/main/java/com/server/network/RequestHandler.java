@@ -5,7 +5,11 @@ import com.utils.MinHeap;
 import com.utils.CommandRegistry;
 import com.server.CommandHistory;
 import com.server.LoggingMiddleware;
+import com.server.DatabaseManager;
 
+import java.nio.channels.AsynchronousSocketChannel;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -60,6 +64,18 @@ public class RequestHandler {
      * @return Response to send back to client
      */
     public Response handle(Request request, String clientInfo) {
+        return handle(request, clientInfo, null);
+    }
+
+    /**
+     * Processes an incoming request and generates a response with client channel for notifications.
+     * 
+     * @param request The incoming request from client
+     * @param clientInfo Client IP and port for logging
+     * @param clientChannel The client's channel for excluding from notifications
+     * @return Response to send back to client
+     */
+    public Response handle(Request request, String clientInfo, AsynchronousSocketChannel clientChannel) {
         long startTime = System.currentTimeMillis();
         
         try {
@@ -72,7 +88,12 @@ public class RequestHandler {
             }
 
             if (request.getType() == Request.RequestType.COMMAND) {
-                Response response = handleCommand(request, clientInfo, startTime);
+                Response response = handleCommand(request, clientInfo, startTime, clientChannel);
+                return response;
+            }
+
+            if (request.getType() == Request.RequestType.EXECUTE_SQL) {
+                Response response = handleExecuteSql(request, clientInfo, startTime);
                 return response;
             }
 
@@ -116,6 +137,44 @@ public class RequestHandler {
         return Response.error("Server not available");
     }
 
+    private Response handleExecuteSql(Request request, String clientInfo, long startTime) {
+        Map<String, Object> args = request.getArgs();
+        String sql = (String) args.get("sql");
+        String operation = (String) args.get("operation");
+        
+        System.err.println("[DEBUG SERVER] handleExecuteSql called with SQL: " + sql);
+        
+        if (sql == null || sql.trim().isEmpty()) {
+            return Response.error("No SQL provided");
+        }
+        
+        String command = (String) args.get("command");
+        
+        try {
+            String result;
+            if ("SELECT".equalsIgnoreCase(operation) || sql.trim().toUpperCase().startsWith("SELECT")) {
+                result = DatabaseManager.executeQueryToString(sql);
+                System.err.println("[DEBUG SERVER] Query result: " + result);
+                if (result.isEmpty()) {
+                    result = "EMPTY_RESULT";
+                }
+            } else {
+                int affectedRows = DatabaseManager.executeUpdate(sql);
+                result = "AFFECTED_ROWS:" + affectedRows;
+            }
+            
+            if (command != null) {
+                DatabaseManager.saveCommand(command, clientInfo);
+            }
+            
+            LoggingMiddleware.logCommand(clientInfo, "EXECUTE_SQL", startTime, true, result.substring(0, Math.min(50, result.length())));
+            return Response.success(result);
+        } catch (SQLException e) {
+            LoggingMiddleware.logCommand(clientInfo, "EXECUTE_SQL", startTime, false, e.getMessage());
+            return Response.error("SQL Error: " + e.getMessage());
+        }
+    }
+
     /**
      * Handles a command request.
      * Routes to CommandRegistry based on:
@@ -130,7 +189,11 @@ public class RequestHandler {
      * @param startTime Start time for duration calculation
      * @return Response containing command result or error
      */
-    private Response handleCommand(Request request, String clientInfo, long startTime) {
+    private static final Set<String> MODIFYING_COMMANDS = Set.of(
+        "add", "add_if_min", "update", "remove_by_id", "remove_greater", "remove_any_by_best_album", "clear"
+    );
+
+    private Response handleCommand(Request request, String clientInfo, long startTime, AsynchronousSocketChannel clientChannel) {
         String command = request.getCommand();
         
         // Track command in history (for history command)
@@ -163,12 +226,38 @@ public class RequestHandler {
             LoggingMiddleware.logCommand(clientInfo, command, args, data != null, startTime, 
                 response.isSuccess(), resultMsg);
             
+            if (response.isSuccess() && MODIFYING_COMMANDS.contains(command)) {
+                // Save to database after modifications
+                MinHeap.getInstance().saveToDatabase();
+                
+                String notification = getNotificationMessage(command);
+                response.setNotification(notification);
+            }
+            
             return response;
         } catch (Exception e) {
             // Log the error
             LoggingMiddleware.logCommand(clientInfo, command, args, data != null, startTime, 
                 false, e.getMessage());
             return Response.error("Command execution error: " + e.getMessage());
+        }
+    }
+
+    private String getNotificationMessage(String command) {
+        return switch (command) {
+            case "add", "add_if_min" -> "A new element was added to the collection";
+            case "update" -> "An element in the collection was modified";
+            case "remove_by_id" -> "An element was removed from the collection";
+            case "remove_greater", "remove_any_by_best_album" -> "Some elements were removed from the collection";
+            case "clear" -> "The collection was cleared";
+            default -> "The collection was updated";
+        };
+    }
+
+    private void broadcastToOthers(String notification, AsynchronousSocketChannel clientChannel) {
+        AsyncServer server = ServerRunner.getServer();
+        if (server != null) {
+            server.broadcastNotification(notification, clientChannel);
         }
     }
 }

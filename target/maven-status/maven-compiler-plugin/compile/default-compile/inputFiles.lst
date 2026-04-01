@@ -1,6 +1,7 @@
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/App.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/cli/CliRunner.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/client/ClientApp.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/client/SqlQueryBuilder.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/client/network/AsyncClient.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/client/network/HealthChecker.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/commands/AddElementCommand.java
@@ -31,6 +32,7 @@
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/MusicBand.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/model/MusicGenre.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/server/CommandHistory.java
+/home/ultrasmork/playground/java/java2/my-app/src/main/java/com/server/DatabaseManager.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/server/LoggingMiddleware.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/server/ServerApp.java
 /home/ultrasmork/playground/java/java2/my-app/src/main/java/com/server/network/AsyncServer.java

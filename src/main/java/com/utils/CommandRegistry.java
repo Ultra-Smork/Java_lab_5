@@ -6,25 +6,29 @@ import com.model.Album;
 import com.model.Coordinates;
 import com.model.MusicGenre;
 import com.server.CommandHistory;
+import com.server.DatabaseManager;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.utils.CollectionFileManager;
+
 /**
  * Registry of all available commands on the server.
- * 
+ *
  * This class holds a map of command names to command implementations.
  * When a command request comes in, this registry executes the
  * appropriate command and returns the result.
- * 
+ *
  * Uses Java Stream API for processing collections:
  * - Filtering commands by name
  * - Mapping results to strings
  * - Collecting results
- * 
+ *
  * Commands supported:
  * - show: Display all music bands
  * - info: Display collection info
@@ -46,28 +50,17 @@ import java.util.stream.Collectors;
 public class CommandRegistry {
     /** Map of command names to command implementations */
     private final Map<String, Command> commands;
-    
+
     /** The invoker (used for some commands) */
     private final Invoker invoker;
-    
+
     /** Command history tracker (optional, for history command) */
     private CommandHistory commandHistory;
 
     /**
      * Creates a new CommandRegistry and registers all available commands.
-     * Without command history.
-     */
-    public CommandRegistry() {
-        this.commands = new HashMap<>();
-        this.invoker = new Invoker();
-        this.commandHistory = null;
-        registerCommands();
-    }
-
-    /**
-     * Creates a new CommandRegistry and registers all available commands.
      * With command history for tracking executed commands.
-     * 
+     *
      * @param commandHistory The CommandHistory instance to use for history command
      */
     public CommandRegistry(CommandHistory commandHistory) {
@@ -93,11 +86,10 @@ public class CommandRegistry {
 
         // Command: info - displays collection information
         commands.put("info", args -> {
-            MinHeap heap = MinHeap.getInstance();
-            String info = String.format("Type: %s\nInitialization date: %s\nElements: %d",
-                heap.getHeapType(),
-                heap.getInitializationDate().toString(),
-                heap.getElementCount());
+            int count = DatabaseManager.getBandCount();
+            String info = String.format("Type: MusicBand (PostgreSQL)\nInitialization date: %s\nElements: %d",
+                LocalDateTime.now().toString(),
+                count);
             return Response.success(info);
         });
 
@@ -168,7 +160,7 @@ public class CommandRegistry {
         // Command: update - updates an existing band
         commands.put("update", args -> {
             MinHeap heap = MinHeap.getInstance();
-            
+
             // If no band data provided, return existing band for update
             if (args == null || args.get("band") == null) {
                 if (args == null || args.get("id") == null) {
@@ -181,7 +173,7 @@ public class CommandRegistry {
                 }
                 return Response.withData(existing);
             }
-            
+
             // If band data provided, update the band
             MusicBand band = (MusicBand) args.get("band");
             if (args.get("id") != null) {
@@ -264,25 +256,30 @@ public class CommandRegistry {
                 return Response.error("Missing file path for execute_script command");
             }
             String filePath = (String) args.get("path");
-            
+            String resolvedPath = CollectionFileManager.resolvePath(filePath);
+
+            if (resolvedPath == null) {
+                return Response.error("Invalid file path: " + filePath);
+            }
+
             // Try to read and execute the script
-            try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(resolvedPath))) {
                 StringBuilder results = new StringBuilder();
                 String line;
                 int lineNum = 0;
-                
+
                 while ((line = reader.readLine()) != null) {
                     lineNum++;
                     String trimmed = line.trim();
                     if (trimmed.isEmpty() || trimmed.startsWith("#")) {
                         continue;
                     }
-                    
+
                     // Execute each command
                     Response cmdResult = executeCommand(trimmed);
                     results.append("Line ").append(lineNum).append(": ").append(cmdResult.getResult() != null ? cmdResult.getResult() : cmdResult.getError()).append("\n");
                 }
-                
+
                 return Response.success("Script executed. Results:\n" + results.toString());
             } catch (IOException e) {
                 return Response.error("Script file not found");
@@ -293,14 +290,14 @@ public class CommandRegistry {
     /**
      * Executes a single command by parsing the command string.
      * Used by execute_script to run commands from a file.
-     * 
+     *
      * @param commandLine The command line to execute
      * @return Response from the command
      */
     private Response executeCommand(String commandLine) {
         String[] parts = commandLine.trim().split("\\s+");
         String cmd = parts[0].toLowerCase();
-        
+
         // Handle commands with arguments
         switch (cmd) {
             case "remove_by_id":
@@ -315,7 +312,7 @@ public class CommandRegistry {
                     }
                 }
                 return Response.error("Missing ID");
-                
+
             case "remove_greater":
                 if (parts.length > 1) {
                     try {
@@ -328,7 +325,7 @@ public class CommandRegistry {
                     }
                 }
                 return Response.error("Missing ID");
-                
+
             case "remove_any_by_best_album":
                 if (parts.length > 1) {
                     String album = commandLine.substring(commandLine.indexOf(" ") + 1);
@@ -337,7 +334,7 @@ public class CommandRegistry {
                     return execute("remove_any_by_best_album", args);
                 }
                 return Response.error("Missing album name");
-                
+
             case "count_by_number_of_participants":
                 if (parts.length > 1) {
                     try {
@@ -350,7 +347,7 @@ public class CommandRegistry {
                     }
                 }
                 return Response.error("Missing count");
-                
+
             case "participants_by_id":
                 if (parts.length > 1) {
                     try {
@@ -363,7 +360,7 @@ public class CommandRegistry {
                     }
                 }
                 return Response.error("Missing ID");
-                
+
             case "add":
             case "add_if_min":
             case "update":
@@ -377,7 +374,7 @@ public class CommandRegistry {
                 // These commands require interactive input or complex arguments
                 // For script execution, they need special handling
                 return execute(cmd, null);
-                
+
             default:
                 return Response.error("Unknown command: " + cmd);
         }
@@ -386,7 +383,7 @@ public class CommandRegistry {
     /**
      * Executes a command by name with arguments from a Map.
      * Uses Stream API to find the matching command.
-     * 
+     *
      * @param commandName The name of the command
      * @param args Optional arguments for the command
      * @return Response from the command execution
@@ -401,7 +398,7 @@ public class CommandRegistry {
 
     /**
      * Executes a command with a data object (for add, add_if_min, update).
-     * 
+     *
      * @param commandName The name of the command
      * @param args Optional arguments (like id)
      * @param data The data object (like MusicBand)
@@ -419,7 +416,7 @@ public class CommandRegistry {
 
     /**
      * Gets a list of all available command names.
-     * 
+     *
      * @return Sorted list of command names
      */
     public List<String> getCommandNames() {

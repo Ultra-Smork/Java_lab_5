@@ -1,6 +1,9 @@
 package com.utils;
 
 import com.model.MusicBand;
+import com.server.DatabaseManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -9,37 +12,20 @@ import java.util.PriorityQueue;
 
 /**
  * Singleton class representing a MinHeap data structure for storing MusicBand objects.
- * This class implements the collection management functionality for the application,
- * providing methods to add, remove, update, and query elements in the collection.
+ * This class implements the collection management functionality for the application.
  * 
- * <p>The heap is implemented using Java's PriorityQueue and maintains:</p>
- * <ul>
- *   <li>Command history for the last 11 commands</li>
- *   <li>Metadata history of collection operations</li>
- *   <li>Automatic persistence to/from file</li>
- * </ul>
+ * <p>Data is loaded from PostgreSQL on initialization and persisted back to the database
+ * only when save is explicitly called. All operations work with the in-memory heap.</p>
  */
 public class MinHeap {
-    /** Singleton instance of the MinHeap */
     private static MinHeap instance;
-    /** History of commands executed (last 11) */
     private ArrayList<String> history;
-    /** The priority queue storing MusicBand elements */
     private PriorityQueue<MusicBand> heap;
-    /** The date and time when the collection was initialized */
     private LocalDateTime initializationDate;
-    /** Description of the heap type */
     private String heapType;
-    /** History of metadata changes to the collection */
     private List<String> metadataHistory;
-    /** Warnings collected during startup load to display after screen clear */
     private List<String> startupWarnings;
 
-    /**
-     * Constructs a new MinHeap instance.
-     * Initializes the heap, history, and loads data from file.
-     * Private constructor - use getInstance() to obtain the singleton.
-     */
     public MinHeap() {
         history = new ArrayList<String>();
         heap = new PriorityQueue<>();
@@ -49,15 +35,9 @@ public class MinHeap {
         startupWarnings = new ArrayList<>();
         recordMetadata("Initialisation");
         
-        loadFromFileSilently();
+        loadFromDatabase();
     }
 
-    /**
-     * Gets the singleton instance of the MinHeap.
-     * Uses double-checked locking for thread safety.
-     *
-     * @return the singleton MinHeap instance
-     */
     public static MinHeap getInstance() {
         if (instance == null) {
             synchronized (MinHeap.class) {
@@ -69,123 +49,136 @@ public class MinHeap {
         return instance;
     }
 
-    /**
-     * Gets the file path used for data persistence.
-     *
-     * @return the path to the data file
-     */
     public static String getFilePath() {
-        return CollectionFileManager.getFirstValidPath();
+        return "PostgreSQL Database";
     }
 
-    /**
-     * Loads the collection from the default file path.
-     * Displays appropriate messages for success, warnings, or errors.
-     */
+    public void loadFromDatabase() {
+        try {
+            ResultSet rs = DatabaseManager.executeQuery("SELECT * FROM music_bands");
+            heap.clear();
+            while (rs.next()) {
+                MusicBand band = resultSetToBand(rs);
+                heap.add(band);
+            }
+            rs.close();
+            System.out.println("Loaded " + heap.size() + " elements from database");
+        } catch (SQLException e) {
+            System.out.println("Error loading from database: " + e.getMessage());
+        }
+        recordMetadata("Loaded from database");
+    }
+
+    public void saveToDatabase() {
+        try {
+            DatabaseManager.executeUpdate("DELETE FROM music_bands");
+            for (MusicBand band : heap) {
+                String sql = buildInsertSql(band);
+                DatabaseManager.executeUpdate(sql);
+            }
+            System.out.println("Saved " + heap.size() + " elements to database");
+        } catch (SQLException e) {
+            System.out.println("Error saving to database: " + e.getMessage());
+        }
+        recordMetadata("Saved to database");
+    }
+
+    private String buildInsertSql(MusicBand band) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("INSERT INTO music_bands (name, x, y, creation_date, number_of_participants, description, genre, album_name, album_sales) VALUES (");
+        sql.append("'").append(escapeString(band.getName())).append("', ");
+        sql.append(band.getCoordinates() != null ? band.getCoordinates().getX() : "NULL").append(", ");
+        sql.append(band.getCoordinates() != null ? band.getCoordinates().getY() : "NULL").append(", ");
+        if (band.getCreationDate() != null) {
+            sql.append("'").append(band.getCreationDate()).append("', ");
+        } else {
+            sql.append("CURRENT_TIMESTAMP, ");
+        }
+        sql.append(band.getNumberOfParticipants()).append(", ");
+        if (band.getDescription() != null) {
+            sql.append("'").append(escapeString(band.getDescription())).append("', ");
+        } else {
+            sql.append("NULL, ");
+        }
+        if (band.getGenre() != null) {
+            sql.append("'").append(band.getGenre().name()).append("', ");
+        } else {
+            sql.append("NULL, ");
+        }
+        if (band.getBestAlbum() != null) {
+            sql.append("'").append(escapeString(band.getBestAlbum().getName())).append("', ");
+            sql.append(band.getBestAlbum().getSales());
+        } else {
+            sql.append("NULL, NULL");
+        }
+        sql.append(")");
+        return sql.toString();
+    }
+
+    private MusicBand resultSetToBand(ResultSet rs) throws SQLException {
+        MusicBand band = new MusicBand();
+        band.setId(rs.getLong("id"));
+        band.setName(rs.getString("name"));
+        
+        long x = rs.getLong("x");
+        int y = rs.getInt("y");
+        if (!rs.wasNull()) {
+            band.setCoordinates(new com.model.Coordinates(x, y));
+        }
+        
+        band.setCreationDate(new java.util.Date(rs.getTimestamp("creation_date").getTime()));
+        band.setNumberOfParticipants(rs.getInt("number_of_participants"));
+        
+        String desc = rs.getString("description");
+        if (desc != null) band.setDescription(desc);
+        
+        String genre = rs.getString("genre");
+        if (genre != null) {
+            band.setGenre(com.model.MusicGenre.valueOf(genre));
+        }
+        
+        String albumName = rs.getString("album_name");
+        double albumSales = rs.getDouble("album_sales");
+        if (!rs.wasNull()) {
+            band.setBestAlbum(new com.model.Album(albumName, albumSales));
+        }
+        
+        return band;
+    }
+
+    private String escapeString(String value) {
+        if (value == null) return "";
+        return value.replace("'", "''");
+    }
+
     public void loadFromFile() {
-        String filePath = CollectionFileManager.getFirstValidPath();
-        CollectionFileManager.LoadResult result = CollectionFileManager.load(filePath);
-        
-        if (!result.isSuccess()) {
-            System.out.println("No saved data found. Starting with empty collection.");
-            return;
-        }
-
-        heap.clear();
-        
-        if (!result.getBands().isEmpty()) {
-            heap.addAll(result.getBands());
-            System.out.println("Loaded " + result.getBands().size() + " elements from: " + filePath);
-        } else {
-            System.out.println("No saved data found. Starting with empty collection.");
-        }
-
-        for (String warning : result.getWarnings()) {
-            System.out.println("Warning: " + warning);
-        }
-
-        recordMetadata("Loaded from file");
+        loadFromDatabase();
     }
 
-    /**
-     * Saves the collection to the default file path.
-     * Outputs success or error messages to standard output.
-     */
     public void saveToFile() {
-        String filePath = CollectionFileManager.getFirstWritablePath();
-        CollectionFileManager.SaveResult result = CollectionFileManager.save(
-            new ArrayList<>(heap), 
-            filePath
-        );
-        
-        if (result.isSuccess()) {
-            System.out.println("Saved " + result.getSavedCount() + " elements to: " + filePath);
-            recordMetadata("Saved to file");
-        } else {
-            System.out.println("Error: " + result.getErrorMessage());
-        }
+        saveToDatabase();
     }
 
     public void saveToFileSilently() {
-        String filePath = CollectionFileManager.getFirstWritablePath();
-        CollectionFileManager.save(new ArrayList<>(heap), filePath);
+        saveToDatabase();
     }
 
     public void loadFromFileSilently() {
-        String filePath = CollectionFileManager.getFirstValidPath();
-        CollectionFileManager.LoadResult result = CollectionFileManager.load(filePath);
-        
-        if (!result.isSuccess()) {
-            return;
-        }
-
-        heap.clear();
-        
-        if (!result.getBands().isEmpty()) {
-            heap.addAll(result.getBands());
-        }
-        
-        for (String warning : result.getWarnings()) {
-            startupWarnings.add(warning);
-        }
+        loadFromDatabase();
     }
 
-    /**
-     * Inserts a new music band into the collection.
-     *
-     * @param band the MusicBand to insert
-     */
     public void insert(MusicBand band) {
         heap.offer(band);
-        saveToFileSilently();
     }
 
-    /**
-     * Removes and returns the minimum element from the collection.
-     *
-     * @return the minimum MusicBand, or null if the collection is empty
-     */
     public MusicBand extractMin() {
-        MusicBand result = heap.poll();
-        if (result != null) {
-            saveToFileSilently();
-        }
-        return result;
+        return heap.poll();
     }
 
-    /**
-     * Returns the minimum element without removing it.
-     *
-     * @return the minimum MusicBand, or null if the collection is empty
-     */
     public MusicBand peek() {
         return heap.peek();
     }
 
-    /**
-     * Prints all elements in the collection to standard output.
-     * Each element is printed using its toString() representation.
-     */
     public void printAll() {
         if (heap.isEmpty()) {
             System.out.println("No elements in the collection.");
@@ -197,26 +190,10 @@ public class MinHeap {
         }
     }
 
-    /**
-     * Removes a music band from the collection by its unique ID.
-     *
-     * @param id the unique identifier of the band to remove
-     * @return true if an element was removed, false otherwise
-     */
     public boolean removeElById(Long id) {
-        boolean removed = heap.removeIf(band -> band.getId() == id);
-        if (removed) {
-            saveToFileSilently();
-        }
-        return removed;
+        return heap.removeIf(band -> band.getId() == id);
     }
 
-    /**
-     * Finds a music band in the collection by its unique ID.
-     *
-     * @param id the unique identifier to search for
-     * @return the MusicBand if found, null otherwise
-     */
     public MusicBand findById(Long id) {
         for (MusicBand band : heap) {
             if (band.getId() == id) {
@@ -226,127 +203,55 @@ public class MinHeap {
         return null;
     }
 
-    /**
-     * Updates an existing music band in the collection with new values.
-     * Removes the old element and inserts the updated one.
-     *
-     * @param updatedBand the MusicBand with updated values (matched by ID)
-     */
     public void updateElement(MusicBand updatedBand) {
         heap.removeIf(band -> band.getId() == updatedBand.getId());
         heap.offer(updatedBand);
-        saveToFileSilently();
     }
 
-    /**
-     * Removes a music band from the collection based on its best album name.
-     * Only removes the first matching element.
-     *
-     * @param albumName the name of the best album to search for
-     * @return true if an element was removed, false otherwise
-     */
     public boolean removeElByBestAlbum(String albumName) {
-        boolean removed = heap.removeIf(band -> band.getBestAlbum() != null && 
+        return heap.removeIf(band -> band.getBestAlbum() != null && 
                               band.getBestAlbum().getName().equalsIgnoreCase(albumName));
-        if (removed) {
-            saveToFileSilently();
-        }
-        return removed;
     }
 
-    /**
-     * Removes all music bands from the collection that have an ID greater than the specified value.
-     *
-     * @param id the ID threshold - all bands with ID greater than this will be removed
-     * @return the number of elements removed
-     */
     public int removeElementsGreaterThanId(Long id) {
         int sizeBefore = heap.size();
         heap.removeIf(band -> band.getId() > id);
-        int removed = sizeBefore - heap.size();
-        if (removed > 0) {
-            saveToFileSilently();
-        }
-        return removed;
+        return sizeBefore - heap.size();
     }
 
-    /**
-     * Removes all elements from the collection.
-     */
     public void clear() {
         heap.clear();
-        saveToFileSilently();
     }
 
-    /**
-     * Prints the history of the last 11 commands executed.
-     */
     public void printHistory(){
         int start = Math.max(0, this.history.size() - 11);
         System.out.println(new ArrayList<>(this.history.subList(start, this.history.size())));
     }
 
-    /**
-     * Adds a command to the command history.
-     *
-     * @param cmd the command string to add to history
-     */
     public void addToHistory(String cmd){
         this.history.add(cmd);
     }
 
-    /**
-     * Gets the date and time when the collection was initialized.
-     *
-     * @return the initialization date and time
-     */
     public LocalDateTime getInitializationDate() {
         return initializationDate;
     }
 
-    /**
-     * Gets the type description of the heap implementation.
-     *
-     * @return the heap type string
-     */
     public String getHeapType() {
         return heapType;
     }
 
-    /**
-     * Gets the current number of elements in the collection.
-     *
-     * @return the element count
-     */
     public int getElementCount() {
         return heap.size();
     }
 
-    /**
-     * Checks if the collection is empty.
-     *
-     * @return true if the collection contains no elements
-     */
     public boolean isEmpty() {
         return heap.isEmpty();
     }
 
-    /**
-     * Gets all elements in the collection as a list.
-     * Returns a copy to prevent external modification of the internal heap.
-     *
-     * @return a list containing all music bands
-     */
     public List<MusicBand> getAllElements() {
         return new ArrayList<>(heap);
     }
 
-    /**
-     * Counts the number of elements in the collection with the specified number of participants.
-     *
-     * @param numberOfParticipants the number of participants to count
-     * @return the count of elements matching the criteria
-     */
     public int countByNumberOfParticipants(int numberOfParticipants) {
         int count = 0;
         for (MusicBand band : heap) {
@@ -358,20 +263,10 @@ public class MinHeap {
         return count;
     }
 
-    /**
-     * Gets the metadata history of collection operations.
-     *
-     * @return a list of metadata history entries
-     */
     public List<String> getMetadataHistory() {
         return new ArrayList<>(metadataHistory);
     }
 
-    /**
-     * Records a metadata entry for the given action.
-     *
-     * @param action the action that triggered the metadata record
-     */
     private void recordMetadata(String action) {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -386,10 +281,6 @@ public class MinHeap {
         return warnings;
     }
 
-    /**
-     * Prints detailed metadata about the collection including type, initialization date,
-     * element count, and metadata history.
-     */
     public void printMetadata() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         System.out.println("\n========== HEAP METADATA ==========");
@@ -397,7 +288,7 @@ public class MinHeap {
         System.out.println("Date of Initialization: " + initializationDate.format(formatter));
         System.out.println("Amount of Elements: " + heap.size());
         System.out.println("Is Empty: " + heap.isEmpty());
-        System.out.println("Data File Path: " + getFilePath());
+        System.out.println("Data Source: " + getFilePath());
         System.out.println("\n--- Metadata History ---");
         for (String entry : metadataHistory) {
             System.out.println(entry);

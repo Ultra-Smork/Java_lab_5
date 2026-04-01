@@ -8,7 +8,12 @@ import com.model.MusicBand;
 import com.model.MusicGenre;
 import com.model.Album;
 import com.model.Coordinates;
+import com.model.MusicGenre;
+import com.model.Album;
+import com.utils.CollectionFileManager;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.*;
 
 /**
@@ -91,6 +96,9 @@ public class ClientApp {
                 if (response.isSuccess()) {
                     if (response.getResult() != null && !response.getResult().isEmpty()) {
                         System.out.println(response.getResult());
+                    }
+                    if (response.getNotification() != null && !response.getNotification().isEmpty()) {
+                        System.out.println("[Notification] " + response.getNotification());
                     }
                     // Check if there's data (like for update command)
                     if (response.getData() != null) {
@@ -348,7 +356,7 @@ public class ClientApp {
 
     /**
      * Handles the add command.
-     * Prompts user for all band fields locally, then sends to server.
+     * Prompts user for all band fields locally, builds SQL, sends to server.
      */
     private static Response handleAdd(AsyncClient client, Scanner scanner) throws Exception {
         MusicBand band = promptForBand(scanner, null);
@@ -361,10 +369,9 @@ public class ClientApp {
 
     /**
      * Handles the add_if_min command.
-     * Prompts user for all band fields (including ID), then sends to server.
+     * Prompts user for all band fields (including ID), sends to server.
      */
     private static Response handleAddIfMin(AsyncClient client, Scanner scanner) throws Exception {
-        // First get the ID from user with validation
         long id = 0;
         while (true) {
             System.out.print("Enter ID (must be positive and less than minimum in collection): ");
@@ -396,10 +403,9 @@ public class ClientApp {
 
     /**
      * Handles the update command.
-     * If ID provided, sends request to get existing band, then prompts user.
+     * Builds UPDATE SQL and sends to server.
      */
     private static Response handleUpdate(AsyncClient client, String[] parts) throws Exception {
-        // Check if ID is provided
         if (parts.length < 2 || !parts[1].equalsIgnoreCase("id") || parts.length < 3) {
             System.out.println("Usage: update id <id>");
             return Response.error("Usage: update id <id>");
@@ -412,18 +418,78 @@ public class ClientApp {
             return Response.error("Invalid ID: " + parts[2] + ". Please enter a valid number.");
         }
         
-        // Send request to get existing band
-        Request request = new Request(RequestType.COMMAND, "update");
+        Request selectRequest = new Request(RequestType.COMMAND, "select");
+        Map<String, Object> selectArgs = new HashMap<>();
+        selectArgs.put("sql", SqlQueryBuilder.buildSelectById(id));
+        selectArgs.put("operation", "SELECT");
+        selectRequest.setArgs(selectArgs);
+        
+        Response selectResp = client.send(selectRequest);
+        if (!selectResp.isSuccess()) {
+            return selectResp;
+        }
+        
+        if (selectResp.getResult() == null || selectResp.getResult().equals("EMPTY_RESULT")) {
+            return Response.error("Band with ID " + id + " not found");
+        }
+        
+        MusicBand existingBand = parseBandFromSqlResult(selectResp.getResult());
+        
+        Scanner scanner = new Scanner(System.in);
+        MusicBand updatedBand = promptForBand(scanner, existingBand);
+        updatedBand.setId(id);
+        
+        String sql = SqlQueryBuilder.buildUpdate(updatedBand);
+        
         Map<String, Object> args = new HashMap<>();
-        args.put("id", id);
+        args.put("sql", sql);
+        args.put("operation", "UPDATE");
+        args.put("command", "update");
+        
+        Request request = new Request(RequestType.COMMAND, "update");
         request.setArgs(args);
         
         return client.send(request);
     }
+    
+    private static MusicBand parseBandFromSqlResult(String sqlResult) {
+        MusicBand band = new MusicBand();
+        String[] rows = sqlResult.split(";");
+        for (String row : rows) {
+            if (row.trim().isEmpty()) continue;
+            String[] kv = row.split("\\|");
+            for (String pair : kv) {
+                String[] keyValue = pair.split("=");
+                if (keyValue.length != 2) continue;
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                
+                switch (key) {
+                    case "id": band.setId(Long.parseLong(value)); break;
+                    case "name": band.setName(value); break;
+                    case "x": band.setCoordinates(new Coordinates(Long.parseLong(value), 0)); break;
+                    case "y": if (band.getCoordinates() != null) band.setCoordinates(new Coordinates(band.getCoordinates().getX(), Integer.parseInt(value))); break;
+                    case "number_of_participants": band.setNumberOfParticipants(Integer.parseInt(value)); break;
+                    case "description": band.setDescription(value.equals("null") ? null : value); break;
+                    case "genre": band.setGenre(value.equals("null") ? null : MusicGenre.valueOf(value)); break;
+                    case "album_name": if (!value.equals("null")) band.setBestAlbum(new Album(value, 0.0)); break;
+                    case "album_sales": if (band.getBestAlbum() != null) band.setBestAlbum(new Album(band.getBestAlbum().getName(), Double.parseDouble(value))); break;
+                    case "creation_date": 
+                        try {
+                            if (!value.equals("null")) {
+                                band.setCreationDate(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(value));
+                            }
+                        } catch (Exception e) {}
+                        break;
+                }
+            }
+        }
+        return band;
+    }
 
     /**
      * Handles the execute_script command.
-     * Sends file path to server for execution.
+     * Reads script file locally and sends commands to server with proper data.
      */
     private static Response handleExecuteScript(AsyncClient client, String input) throws Exception {
         if (!input.contains(" ")) {
@@ -431,13 +497,438 @@ public class ClientApp {
         }
         
         String filePath = input.substring(input.indexOf(" ") + 1).trim();
+        String resolvedPath = CollectionFileManager.resolvePath(filePath);
         
-        Request request = new Request(RequestType.COMMAND, "execute_script");
+        if (resolvedPath == null) {
+            return Response.error("Invalid file path: " + filePath);
+        }
+        
+        List<String> allLines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(resolvedPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                    allLines.add(trimmed);
+                }
+            }
+        } catch (Exception e) {
+            return Response.error("Script file not found: " + e.getMessage());
+        }
+        
+        StringBuilder results = new StringBuilder();
+        int i = 0;
+        
+        while (i < allLines.size()) {
+            String commandLine = allLines.get(i);
+            String[] parts = commandLine.split("\\s+");
+            String cmd = parts[0].toLowerCase();
+            boolean hasArgument = parts.length > 1;
+            String argument = hasArgument ? parts[1] : null;
+            
+            try {
+                switch (cmd) {
+                    case "show":
+                        results.append("Line ").append(i + 1).append(": ").append(executeShow(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "add":
+                        if (i + 8 > allLines.size()) {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: add command requires 8 input lines\n");
+                        } else {
+                            List<String> addInputs = new ArrayList<>();
+                            for (int j = 0; j < 8; j++) {
+                                addInputs.add(allLines.get(i + 1 + j));
+                            }
+                            MusicBand band = parseBandFromInputs(addInputs);
+                            String sql = SqlQueryBuilder.buildInsert(band);
+                            Map<String, Object> args = new HashMap<>();
+                            args.put("sql", sql);
+                            args.put("operation", "INSERT");
+                            args.put("command", "add");
+                            Request addRequest = new Request(RequestType.COMMAND, "add");
+                            addRequest.setArgs(args);
+                            Response resp = client.send(addRequest);
+                            results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                        }
+                        i += 1 + 8;
+                        break;
+                        
+                    case "add_if_min":
+                        if (i + 9 > allLines.size()) {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: add_if_min command requires 9 input lines\n");
+                        } else {
+                            try {
+                                long id = Long.parseLong(allLines.get(i + 1));
+                                List<String> addInputs = new ArrayList<>();
+                                for (int j = 0; j < 8; j++) {
+                                    addInputs.add(allLines.get(i + 2 + j));
+                                }
+                                MusicBand band = parseBandFromInputs(addInputs);
+                                band.setId(id);
+                                String sql = SqlQueryBuilder.buildInsert(band);
+                                Map<String, Object> args = new HashMap<>();
+                                args.put("sql", sql);
+                                args.put("operation", "INSERT");
+                                args.put("command", "add_if_min");
+                                Request addRequest = new Request(RequestType.COMMAND, "add_if_min");
+                                addRequest.setArgs(args);
+                                Response resp = client.send(addRequest);
+                                results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID for add_if_min\n");
+                            }
+                        }
+                        i += 1 + 9;
+                        break;
+                        
+                    case "update":
+                        if (parts.length >= 3 && parts[1].equalsIgnoreCase("id")) {
+                            try {
+                                Long id = Long.parseLong(parts[2]);
+                                if (i + 10 > allLines.size()) {
+                                    results.append("Line ").append(i + 1).append(": ").append("Error: update id command requires 10 input lines\n");
+                                } else {
+                                    List<String> updateInputs = new ArrayList<>();
+                                    for (int j = 0; j < 9; j++) {
+                                        updateInputs.add(allLines.get(i + 3 + j));
+                                    }
+                                    MusicBand band = parseBandFromInputs(updateInputs);
+                                    band.setId(id);
+                                    String sql = SqlQueryBuilder.buildUpdate(band);
+                                    Map<String, Object> args = new HashMap<>();
+                                    args.put("sql", sql);
+                                    args.put("operation", "UPDATE");
+                                    args.put("command", "update");
+                                    Request updateRequest = new Request(RequestType.COMMAND, "update");
+                                    updateRequest.setArgs(args);
+                                    Response resp = client.send(updateRequest);
+                                    results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                                }
+                                i += 1 + 10;
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID in update id command.\n");
+                                i++;
+                            }
+                        } else {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: update command requires 'id <id>' format.\n");
+                            i++;
+                        }
+                        break;
+                        
+                    case "info":
+                        results.append("Line ").append(i + 1).append(": ").append(executeInfo(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "history":
+                        results.append("Line ").append(i + 1).append(": ").append(executeHistory(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "clear":
+                        results.append("Line ").append(i + 1).append(": ").append(executeClear(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "save":
+                        results.append("Line ").append(i + 1).append(": ").append(executeSave(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "remove_by_id":
+                        if (hasArgument) {
+                            try {
+                                Long id = Long.parseLong(argument);
+                                results.append("Line ").append(i + 1).append(": ").append(executeRemoveById(client, id)).append("\n");
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID argument for remove_by_id command.\n");
+                            }
+                        } else if (i + 1 < allLines.size()) {
+                            try {
+                                Long id = Long.parseLong(allLines.get(i + 1));
+                                results.append("Line ").append(i + 1).append(": ").append(executeRemoveById(client, id)).append("\n");
+                                i++;
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID argument for remove_by_id command.\n");
+                                i++;
+                            }
+                        } else {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: remove_by_id command requires an argument.\n");
+                        }
+                        i++;
+                        break;
+                        
+                    case "remove_greater":
+                        if (hasArgument) {
+                            try {
+                                Long id = Long.parseLong(argument);
+                                results.append("Line ").append(i + 1).append(": ").append(executeRemoveGreater(client, id)).append("\n");
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID argument for remove_greater command.\n");
+                            }
+                        } else if (i + 1 < allLines.size()) {
+                            try {
+                                Long id = Long.parseLong(allLines.get(i + 1));
+                                results.append("Line ").append(i + 1).append(": ").append(executeRemoveGreater(client, id)).append("\n");
+                                i++;
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID argument for remove_greater command.\n");
+                                i++;
+                            }
+                        } else {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: remove_greater command requires an argument.\n");
+                        }
+                        i++;
+                        break;
+                        
+                    case "remove_any_by_best_album":
+                        if (hasArgument) {
+                            String album = commandLine.substring(commandLine.indexOf(" ") + 1);
+                            results.append("Line ").append(i + 1).append(": ").append(executeRemoveByBestAlbum(client, album)).append("\n");
+                        } else if (i + 1 < allLines.size()) {
+                            results.append("Line ").append(i + 1).append(": ").append(executeRemoveByBestAlbum(client, allLines.get(i + 1))).append("\n");
+                            i++;
+                        } else {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: remove_any_by_best_album command requires an argument.\n");
+                        }
+                        i++;
+                        break;
+                        
+                    case "count_by_number_of_participants":
+                        if (hasArgument) {
+                            try {
+                                Integer count = Integer.parseInt(argument);
+                                results.append("Line ").append(i + 1).append(": ").append(executeCountByParticipants(client, count)).append("\n");
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid argument for count_by_number_of_participants command.\n");
+                            }
+                        } else if (i + 1 < allLines.size()) {
+                            try {
+                                Integer count = Integer.parseInt(allLines.get(i + 1));
+                                results.append("Line ").append(i + 1).append(": ").append(executeCountByParticipants(client, count)).append("\n");
+                                i++;
+                            } catch (NumberFormatException e) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Invalid argument for count_by_number_of_participants command.\n");
+                                i++;
+                            }
+                        } else {
+                            results.append("Line ").append(i + 1).append(": ").append("Error: count_by_number_of_participants command requires an argument.\n");
+                        }
+                        i++;
+                        break;
+                        
+                    case "average_of_number_of_participants":
+                        results.append("Line ").append(i + 1).append(": ").append(executeAverageParticipants(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    case "execute_script":
+                        results.append("Line ").append(i + 1).append(": ").append("Error: Nested execute_script is not supported in client-server mode.\n");
+                        i++;
+                        break;
+                        
+                    case "help":
+                        results.append("Line ").append(i + 1).append(": ").append(executeHelp(client)).append("\n");
+                        i++;
+                        break;
+                        
+                    default:
+                        results.append("Line ").append(i + 1).append(": ").append("Unknown command: " + cmd).append("\n");
+                        i++;
+                        break;
+                }
+            } catch (Exception e) {
+                results.append("Line ").append(i + 1).append(": ").append("Error: " + e.getMessage()).append("\n");
+                i++;
+            }
+        }
+        
+        return Response.success("Script executed. Results:\n" + results.toString());
+    }
+    
+    private static MusicBand parseBandFromInputs(List<String> inputs) {
+        MusicBand band = new MusicBand();
+        
+        band.setName(inputs.get(0));
+        
+        band.setNumberOfParticipants(Integer.parseInt(inputs.get(1)));
+        
+        String genreStr = inputs.get(2).trim();
+        if (!genreStr.isEmpty()) {
+            try {
+                band.setGenre(MusicGenre.valueOf(genreStr.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                band.setGenre(null);
+            }
+        } else {
+            band.setGenre(null);
+        }
+        
+        long x = Long.parseLong(inputs.get(3));
+        int y = Integer.parseInt(inputs.get(4));
+        band.setCoordinates(new Coordinates(x, y));
+        
+        String description = inputs.get(5).trim();
+        band.setDescription(description.isEmpty() ? null : description);
+        
+        String albumName = inputs.get(6);
+        double sales = Double.parseDouble(inputs.get(7));
+        band.setBestAlbum(new Album(albumName, sales));
+        
+        return band;
+    }
+    
+    private static String executeShow(AsyncClient client) throws Exception {
+        String sql = SqlQueryBuilder.buildSelectAll();
         Map<String, Object> args = new HashMap<>();
-        args.put("path", filePath);
+        args.put("sql", sql);
+        args.put("operation", "SELECT");
+        args.put("command", "show");
+        
+        Request request = new Request(RequestType.COMMAND, "show");
         request.setArgs(args);
         
-        return client.send(request);
+        Response resp = client.send(request);
+        if (!resp.isSuccess()) {
+            return resp.getError();
+        }
+        
+        String result = resp.getResult();
+        if (result == null || result.equals("EMPTY_RESULT")) {
+            return "Collection is empty";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        String[] bands = result.split(";");
+        for (String bandData : bands) {
+            if (bandData.trim().isEmpty()) continue;
+            MusicBand band = parseBandFromSqlResult(bandData);
+            sb.append(band.toString());
+        }
+        return sb.toString();
+    }
+    
+    private static String executeInfo(AsyncClient client) throws Exception {
+        String sql = "SELECT COUNT(*) as count FROM music_bands";
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "SELECT");
+        args.put("command", "info");
+        
+        Request request = new Request(RequestType.COMMAND, "info");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        if (!resp.isSuccess()) {
+            return resp.getError();
+        }
+        
+        String countStr = resp.getResult();
+        return "Collection type: MusicBand\n" +
+               "Database: PostgreSQL\n" +
+               "Number of elements: " + countStr;
+    }
+    
+    private static String executeHistory(AsyncClient client) throws Exception {
+        Request request = new Request(RequestType.COMMAND, "history");
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeClear(AsyncClient client) throws Exception {
+        String sql = "DELETE FROM music_bands";
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "DELETE");
+        args.put("command", "clear");
+        
+        Request request = new Request(RequestType.COMMAND, "clear");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeSave(AsyncClient client) throws Exception {
+        return "Data is automatically persisted to PostgreSQL database";
+    }
+    
+    private static String executeHelp(AsyncClient client) throws Exception {
+        Request request = new Request(RequestType.COMMAND, "help");
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeRemoveById(AsyncClient client, Long id) throws Exception {
+        String sql = SqlQueryBuilder.buildDelete(id);
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "DELETE");
+        args.put("command", "remove_by_id");
+        
+        Request request = new Request(RequestType.COMMAND, "remove_by_id");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeRemoveGreater(AsyncClient client, Long id) throws Exception {
+        String sql = SqlQueryBuilder.buildRemoveGreaterThanId(id);
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "DELETE");
+        args.put("command", "remove_greater");
+        
+        Request request = new Request(RequestType.COMMAND, "remove_greater");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeRemoveByBestAlbum(AsyncClient client, String album) throws Exception {
+        String sql = SqlQueryBuilder.buildRemoveByBestAlbum(album);
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "DELETE");
+        args.put("command", "remove_any_by_best_album");
+        
+        Request request = new Request(RequestType.COMMAND, "remove_any_by_best_album");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeCountByParticipants(AsyncClient client, Integer count) throws Exception {
+        String sql = SqlQueryBuilder.buildCountByParticipants(count);
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "SELECT");
+        args.put("command", "count_by_number_of_participants");
+        
+        Request request = new Request(RequestType.COMMAND, "count_by_number_of_participants");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
+    }
+    
+    private static String executeAverageParticipants(AsyncClient client) throws Exception {
+        String sql = SqlQueryBuilder.buildAverageParticipants();
+        Map<String, Object> args = new HashMap<>();
+        args.put("sql", sql);
+        args.put("operation", "SELECT");
+        args.put("command", "average_of_number_of_participants");
+        
+        Request request = new Request(RequestType.COMMAND, "average_of_number_of_participants");
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        return resp.isSuccess() ? resp.getResult() : resp.getError();
     }
 
     /**
