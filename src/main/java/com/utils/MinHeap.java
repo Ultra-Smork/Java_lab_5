@@ -9,6 +9,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Singleton class representing a MinHeap data structure for storing MusicBand objects.
@@ -16,6 +19,8 @@ import java.util.PriorityQueue;
  * 
  * <p>Data is loaded from PostgreSQL on initialization and persisted back to the database
  * only when save is explicitly called. All operations work with the in-memory heap.</p>
+ * 
+ * <p>Uses ReentrantReadWriteLock for thread-safe access to the collection.</p>
  */
 public class MinHeap {
     private static MinHeap instance;
@@ -25,6 +30,7 @@ public class MinHeap {
     private String heapType;
     private List<String> metadataHistory;
     private List<String> startupWarnings;
+    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public MinHeap() {
         history = new ArrayList<String>();
@@ -54,6 +60,7 @@ public class MinHeap {
     }
 
     public void loadFromDatabase() {
+        rwLock.writeLock().lock();
         try {
             ResultSet rs = DatabaseManager.executeQuery("SELECT * FROM music_bands");
             heap.clear();
@@ -65,27 +72,88 @@ public class MinHeap {
             System.out.println("Loaded " + heap.size() + " elements from database");
         } catch (SQLException e) {
             System.out.println("Error loading from database: " + e.getMessage());
+        } finally {
+            rwLock.writeLock().unlock();
         }
         recordMetadata("Loaded from database");
     }
 
-    public void saveToDatabase() {
+    public boolean saveToDatabase() {
+        boolean success = true;
+        rwLock.readLock().lock();
         try {
             DatabaseManager.executeUpdate("DELETE FROM music_bands");
-            for (MusicBand band : heap) {
-                String sql = buildInsertSql(band);
-                DatabaseManager.executeUpdate(sql);
+            
+            if (heap.isEmpty()) {
+                System.out.println("Saved 0 elements to database");
+                return true;
             }
+            
+            List<MusicBand> bands = new ArrayList<>(heap);
+            ForkJoinPool pool = new ForkJoinPool();
+            InsertBatchTask task = new InsertBatchTask(bands, 0, bands.size());
+            pool.invoke(task);
+            
+            if (task.hasErrors()) {
+                System.err.println("Some inserts failed during save");
+                success = false;
+            }
+            
             System.out.println("Saved " + heap.size() + " elements to database");
         } catch (SQLException e) {
             System.out.println("Error saving to database: " + e.getMessage());
+            success = false;
+        } finally {
+            rwLock.readLock().unlock();
         }
         recordMetadata("Saved to database");
+        return success;
+    }
+    
+    private class InsertBatchTask extends RecursiveAction {
+        private final List<MusicBand> bands;
+        private final int start;
+        private final int end;
+        private static final int THRESHOLD = 10;
+        private volatile boolean hasError = false;
+        
+        public InsertBatchTask(List<MusicBand> bands, int start, int end) {
+            this.bands = bands;
+            this.start = start;
+            this.end = end;
+        }
+        
+        public boolean hasErrors() {
+            return hasError;
+        }
+        
+        @Override
+        protected void compute() {
+            if (end - start <= THRESHOLD) {
+                for (int i = start; i < end; i++) {
+                    try {
+                        String sql = buildInsertSql(bands.get(i));
+                        DatabaseManager.executeUpdate(sql);
+                    } catch (SQLException e) {
+                        System.err.println("Error inserting band: " + e.getMessage());
+                        hasError = true;
+                    }
+                }
+            } else {
+                int mid = start + (end - start) / 2;
+                InsertBatchTask left = new InsertBatchTask(bands, start, mid);
+                InsertBatchTask right = new InsertBatchTask(bands, mid, end);
+                invokeAll(left, right);
+                if (left.hasErrors() || right.hasErrors()) {
+                    hasError = true;
+                }
+            }
+        }
     }
 
     private String buildInsertSql(MusicBand band) {
         StringBuilder sql = new StringBuilder();
-        sql.append("INSERT INTO music_bands (name, x, y, creation_date, number_of_participants, description, genre, album_name, album_sales) VALUES (");
+        sql.append("INSERT INTO music_bands (name, x, y, creation_date, number_of_participants, description, genre, album_name, album_sales, owner_login, owner_password_hash) VALUES (");
         sql.append("'").append(escapeString(band.getName())).append("', ");
         sql.append(band.getCoordinates() != null ? band.getCoordinates().getX() : "NULL").append(", ");
         sql.append(band.getCoordinates() != null ? band.getCoordinates().getY() : "NULL").append(", ");
@@ -110,6 +178,13 @@ public class MinHeap {
             sql.append(band.getBestAlbum().getSales());
         } else {
             sql.append("NULL, NULL");
+        }
+        
+        if (band.getOwnerLogin() != null) {
+            sql.append(", '").append(escapeString(band.getOwnerLogin())).append("'");
+            sql.append(", '").append(escapeString(band.getOwnerPasswordHash())).append("'");
+        } else {
+            sql.append(", NULL, NULL");
         }
         sql.append(")");
         return sql.toString();
@@ -143,6 +218,12 @@ public class MinHeap {
             band.setBestAlbum(new com.model.Album(albumName, albumSales));
         }
         
+        String ownerLogin = rs.getString("owner_login");
+        if (ownerLogin != null) {
+            band.setOwnerLogin(ownerLogin);
+            band.setOwnerPasswordHash(rs.getString("owner_password_hash"));
+        }
+        
         return band;
     }
 
@@ -168,15 +249,30 @@ public class MinHeap {
     }
 
     public void insert(MusicBand band) {
-        heap.offer(band);
+        rwLock.writeLock().lock();
+        try {
+            heap.offer(band);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public MusicBand extractMin() {
-        return heap.poll();
+        rwLock.writeLock().lock();
+        try {
+            return heap.poll();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public MusicBand peek() {
-        return heap.peek();
+        rwLock.readLock().lock();
+        try {
+            return heap.peek();
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
     public void printAll() {
@@ -191,36 +287,101 @@ public class MinHeap {
     }
 
     public boolean removeElById(Long id) {
-        return heap.removeIf(band -> band.getId() == id);
+        rwLock.writeLock().lock();
+        try {
+            return heap.removeIf(band -> band.getId() == id);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public MusicBand findById(Long id) {
-        for (MusicBand band : heap) {
-            if (band.getId() == id) {
-                return band;
+        rwLock.readLock().lock();
+        try {
+            for (MusicBand band : heap) {
+                if (band.getId() == id) {
+                    return band;
+                }
             }
+            return null;
+        } finally {
+            rwLock.readLock().unlock();
         }
-        return null;
     }
 
     public void updateElement(MusicBand updatedBand) {
-        heap.removeIf(band -> band.getId() == updatedBand.getId());
-        heap.offer(updatedBand);
+        rwLock.writeLock().lock();
+        try {
+            heap.removeIf(band -> band.getId() == updatedBand.getId());
+            heap.offer(updatedBand);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public boolean removeElByBestAlbum(String albumName) {
-        return heap.removeIf(band -> band.getBestAlbum() != null && 
-                              band.getBestAlbum().getName().equalsIgnoreCase(albumName));
+        rwLock.writeLock().lock();
+        try {
+            return heap.removeIf(band -> band.getBestAlbum() != null && 
+                                  band.getBestAlbum().getName().equalsIgnoreCase(albumName));
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    public int removeElByBestAlbumOwned(String albumName, String ownerLogin) {
+        rwLock.writeLock().lock();
+        try {
+            int sizeBefore = heap.size();
+            heap.removeIf(band -> band.getBestAlbum() != null && 
+                                  band.getBestAlbum().getName().equalsIgnoreCase(albumName) &&
+                                  ownerLogin.equals(band.getOwnerLogin()));
+            return sizeBefore - heap.size();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public int removeElementsGreaterThanId(Long id) {
-        int sizeBefore = heap.size();
-        heap.removeIf(band -> band.getId() > id);
-        return sizeBefore - heap.size();
+        rwLock.writeLock().lock();
+        try {
+            int sizeBefore = heap.size();
+            heap.removeIf(band -> band.getId() > id);
+            return sizeBefore - heap.size();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    public int removeElementsGreaterThanIdOwned(Long id, String ownerLogin) {
+        rwLock.writeLock().lock();
+        try {
+            int sizeBefore = heap.size();
+            heap.removeIf(band -> band.getId() > id && ownerLogin.equals(band.getOwnerLogin()));
+            return sizeBefore - heap.size();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public void clear() {
-        heap.clear();
+        rwLock.writeLock().lock();
+        try {
+            heap.clear();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+    
+    public int clearOwned(String ownerLogin) {
+        rwLock.writeLock().lock();
+        try {
+            int sizeBefore = heap.size();
+            heap.removeIf(band -> ownerLogin.equals(band.getOwnerLogin()));
+            return sizeBefore - heap.size();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     public void printHistory(){
@@ -241,26 +402,46 @@ public class MinHeap {
     }
 
     public int getElementCount() {
-        return heap.size();
+        rwLock.readLock().lock();
+        try {
+            return heap.size();
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
     public boolean isEmpty() {
-        return heap.isEmpty();
+        rwLock.readLock().lock();
+        try {
+            return heap.isEmpty();
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
     public List<MusicBand> getAllElements() {
-        return new ArrayList<>(heap);
+        rwLock.readLock().lock();
+        try {
+            return new ArrayList<>(heap);
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
     public int countByNumberOfParticipants(int numberOfParticipants) {
-        int count = 0;
-        for (MusicBand band : heap) {
-            if (band.getNumberOfParticipants() != null && 
-                band.getNumberOfParticipants().equals(numberOfParticipants)) {
-                count++;
+        rwLock.readLock().lock();
+        try {
+            int count = 0;
+            for (MusicBand band : heap) {
+                if (band.getNumberOfParticipants() != null && 
+                    band.getNumberOfParticipants().equals(numberOfParticipants)) {
+                    count++;
+                }
             }
+            return count;
+        } finally {
+            rwLock.readLock().unlock();
         }
-        return count;
     }
 
     public List<String> getMetadataHistory() {

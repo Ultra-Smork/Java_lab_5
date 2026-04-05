@@ -84,6 +84,19 @@ public class CommandRegistry {
             return Response.success(String.join("\n", result));
         });
 
+        // Command: select - fetches a single band by ID (for update flow)
+        commands.put("select", args -> {
+            if (args == null || args.get("id") == null) {
+                return Response.error("Missing ID for select command");
+            }
+            Long id = ((Number) args.get("id")).longValue();
+            MusicBand band = MinHeap.getInstance().findById(id);
+            if (band == null) {
+                return Response.error("No MusicBand found with id " + id);
+            }
+            return Response.withData(band);
+        });
+
         // Command: info - displays collection information
         commands.put("info", args -> {
             int count = DatabaseManager.getBandCount();
@@ -93,18 +106,87 @@ public class CommandRegistry {
             return Response.success(info);
         });
 
-        // Command: help - displays available commands
+        // Command: help - displays available commands with descriptions
         commands.put("help", args -> {
-            String help = commands.keySet().stream()
-                .sorted()
-                .collect(Collectors.joining(", "));
+            String help = 
+                "=== MUSIC BAND COLLECTION COMMANDS ===\n\n" +
+                "AUTHENTICATION (no login required):\n" +
+                "  register <login> <password>    - Create a new user account\n" +
+                "  login <login> <password>      - Authenticate to access modify commands\n\n" +
+                
+                "VIEW COMMANDS (no login required):\n" +
+                "  show                         - Display all music bands sorted by name\n" +
+                "  info                         - Display collection information\n" +
+                "  help                         - Display this help message\n" +
+                "  history                      - Display command history\n" +
+                "  count_by_number_of_participants <count> - Count bands with N participants\n" +
+                "  participants_by_id <id>     - Show participants for band with ID\n" +
+                "  average_of_number_of_participants - Show average participants count\n\n" +
+                
+                "MODIFY COMMANDS (login required, modify own bands only):\n" +
+                "  add                          - Add a new music band (interactive)\n" +
+                "  add_if_min <id>              - Add band if ID is less than minimum\n" +
+                "  update id <id>              - Update band with specified ID\n" +
+                "  remove_by_id <id>           - Remove band with specified ID\n" +
+                "  remove_greater <id>         - Remove bands with ID greater than N\n" +
+                "  remove_any_by_best_album <album> - Remove bands with specified album\n" +
+                "  clear                       - Remove all your bands from collection\n" +
+                "  execute_script <file_path>  - Execute commands from script file\n\n" +
+                
+                "EXAMPLES:\n" +
+                "  register alice password123   - Create user 'alice'\n" +
+                "  login alice password123      - Login as alice\n" +
+                "  add                         - Add a new band (interactive)\n" +
+                "  update id 123               - Update band with ID 123\n" +
+                "  execute_script ~/scripts.txt - Run commands from file\n";
             return Response.success(help);
         });
 
-        // Command: clear - clears the collection
+        // Command: register - creates a new user account
+        commands.put("register", args -> {
+            if (args == null || args.get("login") == null || args.get("password") == null) {
+                return Response.error("Usage: register <login> <password>");
+            }
+            String login = (String) args.get("login");
+            String password = (String) args.get("password");
+            
+            if (DatabaseManager.userExists(login)) {
+                return Response.error("User already exists: " + login);
+            }
+            
+            if (DatabaseManager.registerUser(login, password)) {
+                return Response.success("User registered successfully: " + login);
+            } else {
+                return Response.error("Failed to register user");
+            }
+        });
+
+        // Command: login - authenticates a user
+        commands.put("login", args -> {
+            if (args == null || args.get("login") == null || args.get("password") == null) {
+                return Response.error("Usage: login <login> <password>");
+            }
+            String login = (String) args.get("login");
+            String password = (String) args.get("password");
+            
+            if (DatabaseManager.validateUser(login, password)) {
+                return Response.success("Login successful: " + login);
+            } else {
+                return Response.error("Invalid login or password");
+            }
+        });
+
+        // Command: clear - clears only user's own bands
         commands.put("clear", args -> {
-            MinHeap.getInstance().clear();
-            return Response.success("Collection cleared");
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
+            
+            if (login == null || passwordHash == null) {
+                return Response.error("Authentication required to clear collection");
+            }
+            
+            int count = MinHeap.getInstance().clearOwned(login);
+            return Response.success("Cleared " + count + " of your bands");
         });
 
         // Note: save command is disabled for clients - server saves automatically
@@ -138,6 +220,15 @@ public class CommandRegistry {
                 return Response.error("Missing band data for add command");
             }
             MusicBand band = (MusicBand) args.get("band");
+            
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
+            
+            if (login != null && passwordHash != null) {
+                band.setOwnerLogin(login);
+                band.setOwnerPasswordHash(passwordHash);
+            }
+            
             MinHeap.getInstance().insert(band);
             return Response.success("Added new band:\n" + band);
         });
@@ -148,6 +239,15 @@ public class CommandRegistry {
                 return Response.error("Missing band data for add_if_min command");
             }
             MusicBand band = (MusicBand) args.get("band");
+            
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
+            
+            if (login != null && passwordHash != null) {
+                band.setOwnerLogin(login);
+                band.setOwnerPasswordHash(passwordHash);
+            }
+            
             MinHeap heap = MinHeap.getInstance();
             MusicBand currentMin = heap.peek();
             if (currentMin != null && band.getId() >= currentMin.getId()) {
@@ -180,6 +280,24 @@ public class CommandRegistry {
                 Long id = ((Number) args.get("id")).longValue();
                 band.setId(id);
             }
+            
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
+            
+            // Check ownership before updating
+            // If band HAS an owner, you must be that owner to modify it
+            MusicBand existing = heap.findById(band.getId());
+            if (existing != null && existing.getOwnerLogin() != null) {
+                if (login == null || !login.equals(existing.getOwnerLogin())) {
+                    return Response.error("You can only update your own bands");
+                }
+            }
+            
+            if (login != null && passwordHash != null) {
+                band.setOwnerLogin(login);
+                band.setOwnerPasswordHash(passwordHash);
+            }
+            
             heap.updateElement(band);
             return Response.success("MusicBand updated successfully!\n" + band);
         });
@@ -190,7 +308,17 @@ public class CommandRegistry {
                 return Response.error("Missing ID for remove_by_id command");
             }
             Long id = ((Number) args.get("id")).longValue();
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
             MinHeap heap = MinHeap.getInstance();
+            
+            if (login != null && passwordHash != null) {
+                MusicBand band = heap.findById(id);
+                if (band != null && band.getOwnerLogin() != null && !login.equals(band.getOwnerLogin())) {
+                    return Response.error("You can only remove your own bands");
+                }
+            }
+            
             boolean removed = heap.removeElById(id);
             if (removed) {
                 return Response.success("MusicBand with id " + id + " has been removed.");
@@ -205,8 +333,16 @@ public class CommandRegistry {
                 return Response.error("Missing ID for remove_greater command");
             }
             Long id = ((Number) args.get("id")).longValue();
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
             MinHeap heap = MinHeap.getInstance();
-            int count = heap.removeElementsGreaterThanId(id);
+            
+            int count = 0;
+            if (login != null && passwordHash != null) {
+                count = heap.removeElementsGreaterThanIdOwned(id, login);
+            } else {
+                return Response.error("Authentication required to remove elements");
+            }
             return Response.success("Removed " + count + " elements with ID greater than " + id);
         });
 
@@ -216,10 +352,19 @@ public class CommandRegistry {
                 return Response.error("Missing album name for remove_any_by_best_album command");
             }
             String albumName = (String) args.get("album");
+            String login = (String) args.get("login");
+            String passwordHash = (String) args.get("passwordHash");
             MinHeap heap = MinHeap.getInstance();
-            boolean removed = heap.removeElByBestAlbum(albumName);
-            if (removed) {
-                return Response.success("Removed one MusicBand with best album: " + albumName);
+            
+            int count = 0;
+            if (login != null && passwordHash != null) {
+                count = heap.removeElByBestAlbumOwned(albumName, login);
+            } else {
+                return Response.error("Authentication required to remove elements");
+            }
+            
+            if (count > 0) {
+                return Response.success("Removed " + count + " MusicBand(s) with best album: " + albumName);
             } else {
                 return Response.error("No MusicBand found with best album: " + albumName);
             }

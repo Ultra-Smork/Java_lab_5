@@ -11,7 +11,6 @@ com/model/Album.class
 com/client/network/HealthChecker.class
 com/commands/RemoveByBestAlbumCommand.class
 com/common/Request.class
-com/server/network/AsyncServer$2$1.class
 com/common/Serializer.class
 com/server/ServerApp.class
 com/commands/LoadCommand.class
@@ -34,7 +33,6 @@ com/utils/CollectionFileManager$SaveResult.class
 com/model/Coordinates.class
 com/commands/ListEverythingCommand.class
 com/commands/SaveCommand.class
-com/server/network/AsyncServer$3$1.class
 com/server/network/AsyncServer$3.class
 com/commands/RemoveGreaterThanIdCommand.class
 com/commands/AddIfMinCommand.class
@@ -48,6 +46,7 @@ com/utils/CollectionFileManager.class
 com/commands/ShowHistoryCommand.class
 com/model/MusicBand.class
 com/utils/CommandRegistry$Command.class
+com/utils/MinHeap$InsertBatchTask.class
 com/commands/CleanHeapCommand.class
 com/App.class
 com/commands/UpdateElementCommand.class

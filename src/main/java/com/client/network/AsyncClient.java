@@ -48,7 +48,10 @@ public class AsyncClient {
     private static final int MAX_RECONNECT_ATTEMPTS = 3;
 
     /** Delay between reconnect attempts in milliseconds */
-    private static final int RECONNECT_DELAY_MS = 2000;
+    private static final int RECONNECT_DELAY_MS = 500;
+
+    /** Delay after successful reconnection before retry */
+    private static final int POST_RECONNECT_DELAY_MS = 200;
 
     private final List<String> pendingNotifications = Collections.synchronizedList(new ArrayList<>());
 
@@ -222,6 +225,12 @@ public class AsyncClient {
         } catch (IOException e) {
             // Try to reconnect and retry once
             if (reconnect(1)) {
+                // Small delay after reconnection to let server stabilize
+                try {
+                    Thread.sleep(POST_RECONNECT_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
                 return send(request);
             }
             throw e;

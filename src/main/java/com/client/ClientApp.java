@@ -37,6 +37,10 @@ public class ClientApp {
     
     /** Default server port */
     private static final int DEFAULT_PORT = 8080;
+    
+    /** Current logged-in user */
+    private static String currentLogin = null;
+    private static String currentPasswordHash = null;
 
     /**
      * Starts the client application.
@@ -264,6 +268,12 @@ public class ClientApp {
         
         // Handle commands that need special processing
         switch (cmd) {
+            case "register":
+                return handleRegister(client, parts);
+                
+            case "login":
+                return handleLogin(client, parts);
+                
             case "add":
                 return handleAdd(client, scanner);
                 
@@ -280,6 +290,54 @@ public class ClientApp {
                 // Commands with arguments - parse them and send to server
                 return handleCommandWithArgs(client, cmd, parts);
         }
+    }
+    
+    private static Response handleRegister(AsyncClient client, String[] parts) throws Exception {
+        if (parts.length < 3) {
+            return Response.error("Usage: register <login> <password>");
+        }
+        String login = parts[1];
+        String password = parts[2];
+        
+        Map<String, Object> args = new HashMap<>();
+        args.put("login", login);
+        args.put("password", password);
+        
+        Request request = new Request(RequestType.COMMAND, "register");
+        request.setArgs(args);
+        request.setLogin(login);
+        request.setPassword(password);
+        
+        Response resp = client.send(request);
+        if (resp.isSuccess()) {
+            currentLogin = login;
+            currentPasswordHash = com.server.DatabaseManager.hashPassword(password);
+        }
+        return resp;
+    }
+    
+    private static Response handleLogin(AsyncClient client, String[] parts) throws Exception {
+        if (parts.length < 3) {
+            return Response.error("Usage: login <login> <password>");
+        }
+        String login = parts[1];
+        String password = parts[2];
+        
+        Request request = new Request(RequestType.COMMAND, "login");
+        request.setLogin(login);
+        request.setPassword(password);
+        
+        Map<String, Object> args = new HashMap<>();
+        args.put("login", login);
+        args.put("password", password);
+        request.setArgs(args);
+        
+        Response resp = client.send(request);
+        if (resp.isSuccess()) {
+            currentLogin = login;
+            currentPasswordHash = com.server.DatabaseManager.hashPassword(password);
+        }
+        return resp;
     }
 
     /**
@@ -348,9 +406,15 @@ public class ClientApp {
         }
         
         Request request = new Request(RequestType.COMMAND, cmd);
-        if (!args.isEmpty()) {
-            request.setArgs(args);
+        request.setArgs(args);
+        
+        if (currentLogin != null && currentPasswordHash != null) {
+            request.setLogin(currentLogin);
+            request.setPassword(currentPasswordHash);
+            args.put("login", currentLogin);
+            args.put("passwordHash", currentPasswordHash);
         }
+        
         return client.send(request);
     }
 
@@ -359,10 +423,20 @@ public class ClientApp {
      * Prompts user for all band fields locally, builds SQL, sends to server.
      */
     private static Response handleAdd(AsyncClient client, Scanner scanner) throws Exception {
+        if (currentLogin == null) {
+            return Response.error("Please login first using 'login <login> <password>'");
+        }
         MusicBand band = promptForBand(scanner, null);
         
         Request request = new Request(RequestType.COMMAND, "add");
         request.setData(band);
+        request.setLogin(currentLogin);
+        request.setPassword(currentPasswordHash);
+        
+        Map<String, Object> args = new HashMap<>();
+        args.put("login", currentLogin);
+        args.put("passwordHash", currentPasswordHash);
+        request.setArgs(args);
         
         return client.send(request);
     }
@@ -372,6 +446,9 @@ public class ClientApp {
      * Prompts user for all band fields (including ID), sends to server.
      */
     private static Response handleAddIfMin(AsyncClient client, Scanner scanner) throws Exception {
+        if (currentLogin == null) {
+            return Response.error("Please login first using 'login <login> <password>'");
+        }
         long id = 0;
         while (true) {
             System.out.print("Enter ID (must be positive and less than minimum in collection): ");
@@ -397,6 +474,13 @@ public class ClientApp {
         
         Request request = new Request(RequestType.COMMAND, "add_if_min");
         request.setData(band);
+        request.setLogin(currentLogin);
+        request.setPassword(currentPasswordHash);
+        
+        Map<String, Object> args = new HashMap<>();
+        args.put("login", currentLogin);
+        args.put("passwordHash", currentPasswordHash);
+        request.setArgs(args);
         
         return client.send(request);
     }
@@ -406,6 +490,9 @@ public class ClientApp {
      * Builds UPDATE SQL and sends to server.
      */
     private static Response handleUpdate(AsyncClient client, String[] parts) throws Exception {
+        if (currentLogin == null) {
+            return Response.error("Please login first using 'login <login> <password>'");
+        }
         if (parts.length < 2 || !parts[1].equalsIgnoreCase("id") || parts.length < 3) {
             System.out.println("Usage: update id <id>");
             return Response.error("Usage: update id <id>");
@@ -420,8 +507,7 @@ public class ClientApp {
         
         Request selectRequest = new Request(RequestType.COMMAND, "select");
         Map<String, Object> selectArgs = new HashMap<>();
-        selectArgs.put("sql", SqlQueryBuilder.buildSelectById(id));
-        selectArgs.put("operation", "SELECT");
+        selectArgs.put("id", id);
         selectRequest.setArgs(selectArgs);
         
         Response selectResp = client.send(selectRequest);
@@ -429,24 +515,24 @@ public class ClientApp {
             return selectResp;
         }
         
-        if (selectResp.getResult() == null || selectResp.getResult().equals("EMPTY_RESULT")) {
+        if (selectResp.getData() == null) {
             return Response.error("Band with ID " + id + " not found");
         }
         
-        MusicBand existingBand = parseBandFromSqlResult(selectResp.getResult());
+        MusicBand existingBand = (MusicBand) selectResp.getData();
         
         Scanner scanner = new Scanner(System.in);
         MusicBand updatedBand = promptForBand(scanner, existingBand);
         updatedBand.setId(id);
         
-        String sql = SqlQueryBuilder.buildUpdate(updatedBand);
-        
         Map<String, Object> args = new HashMap<>();
-        args.put("sql", sql);
-        args.put("operation", "UPDATE");
-        args.put("command", "update");
+        args.put("id", id);
+        args.put("band", updatedBand);
+        args.put("login", currentLogin);
+        args.put("passwordHash", currentPasswordHash);
         
         Request request = new Request(RequestType.COMMAND, "update");
+        request.setData(updatedBand);
         request.setArgs(args);
         
         return client.send(request);
@@ -542,15 +628,19 @@ public class ClientApp {
                                 addInputs.add(allLines.get(i + 1 + j));
                             }
                             MusicBand band = parseBandFromInputs(addInputs);
-                            String sql = SqlQueryBuilder.buildInsert(band);
-                            Map<String, Object> args = new HashMap<>();
-                            args.put("sql", sql);
-                            args.put("operation", "INSERT");
-                            args.put("command", "add");
-                            Request addRequest = new Request(RequestType.COMMAND, "add");
-                            addRequest.setArgs(args);
-                            Response resp = client.send(addRequest);
-                            results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                            
+                            if (currentLogin == null) {
+                                results.append("Line ").append(i + 1).append(": ").append("Error: Please login first using 'login <login> <password>'\n");
+                            } else {
+                                Map<String, Object> args = new HashMap<>();
+                                args.put("login", currentLogin);
+                                args.put("passwordHash", currentPasswordHash);
+                                Request addRequest = new Request(RequestType.COMMAND, "add");
+                                addRequest.setData(band);
+                                addRequest.setArgs(args);
+                                Response resp = client.send(addRequest);
+                                results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                            }
                         }
                         i += 1 + 8;
                         break;
@@ -567,15 +657,19 @@ public class ClientApp {
                                 }
                                 MusicBand band = parseBandFromInputs(addInputs);
                                 band.setId(id);
-                                String sql = SqlQueryBuilder.buildInsert(band);
-                                Map<String, Object> args = new HashMap<>();
-                                args.put("sql", sql);
-                                args.put("operation", "INSERT");
-                                args.put("command", "add_if_min");
-                                Request addRequest = new Request(RequestType.COMMAND, "add_if_min");
-                                addRequest.setArgs(args);
-                                Response resp = client.send(addRequest);
-                                results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                                
+                                if (currentLogin == null) {
+                                    results.append("Line ").append(i + 1).append(": ").append("Error: Please login first\n");
+                                } else {
+                                    Map<String, Object> args = new HashMap<>();
+                                    args.put("login", currentLogin);
+                                    args.put("passwordHash", currentPasswordHash);
+                                    Request addRequest = new Request(RequestType.COMMAND, "add_if_min");
+                                    addRequest.setData(band);
+                                    addRequest.setArgs(args);
+                                    Response resp = client.send(addRequest);
+                                    results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                                }
                             } catch (NumberFormatException e) {
                                 results.append("Line ").append(i + 1).append(": ").append("Error: Invalid ID for add_if_min\n");
                             }
@@ -596,15 +690,21 @@ public class ClientApp {
                                     }
                                     MusicBand band = parseBandFromInputs(updateInputs);
                                     band.setId(id);
-                                    String sql = SqlQueryBuilder.buildUpdate(band);
-                                    Map<String, Object> args = new HashMap<>();
-                                    args.put("sql", sql);
-                                    args.put("operation", "UPDATE");
-                                    args.put("command", "update");
-                                    Request updateRequest = new Request(RequestType.COMMAND, "update");
-                                    updateRequest.setArgs(args);
-                                    Response resp = client.send(updateRequest);
-                                    results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                                    
+                                    if (currentLogin == null) {
+                                        results.append("Line ").append(i + 1).append(": ").append("Error: Please login first\n");
+                                    } else {
+                                        Map<String, Object> args = new HashMap<>();
+                                        args.put("id", id);
+                                        args.put("band", band);
+                                        args.put("login", currentLogin);
+                                        args.put("passwordHash", currentPasswordHash);
+                                        Request updateRequest = new Request(RequestType.COMMAND, "update");
+                                        updateRequest.setData(band);
+                                        updateRequest.setArgs(args);
+                                        Response resp = client.send(updateRequest);
+                                        results.append("Line ").append(i + 1).append(": ").append(resp.isSuccess() ? resp.getResult() : resp.getError()).append("\n");
+                                    }
                                 }
                                 i += 1 + 10;
                             } catch (NumberFormatException e) {

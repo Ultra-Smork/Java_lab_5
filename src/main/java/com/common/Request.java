@@ -42,6 +42,19 @@ public class Request implements Serializable {
      * This field is Serializable so it can be sent over the network.
      */
     private Serializable data;
+    
+    /**
+     * User's login for authentication.
+     * Sent with each request to identify the user.
+     */
+    private String login;
+    
+    /**
+     * User's password for authentication.
+     * Sent with each request for verification.
+     * Server will hash with SHA-384 and compare with stored hash.
+     */
+    private String password;
 
     /**
      * Default constructor required for deserialization.
@@ -86,6 +99,12 @@ public class Request implements Serializable {
 
     public Serializable getData() { return data; }
     public void setData(Serializable data) { this.data = data; }
+    
+    public String getLogin() { return login; }
+    public void setLogin(String login) { this.login = login; }
+    
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     /**
      * Enum defining all possible request types.

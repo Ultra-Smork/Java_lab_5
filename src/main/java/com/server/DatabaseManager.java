@@ -83,7 +83,8 @@ public class DatabaseManager {
             List<String> migrationFiles = Arrays.asList(
                 "V1__initial_schema.sql",
                 "V2__create_genre_table.sql",
-                "V3__command_history.sql"
+                "V3__command_history.sql",
+                "V4__users_table.sql"
             );
 
             for (String migrationFile : migrationFiles) {
@@ -96,11 +97,27 @@ public class DatabaseManager {
                     }
                     String sql = new String(is.readAllBytes());
                     is.close();
-                    String[] statements = sql.split(";");
+                    // Remove SQL comments and split by semicolon
+                    StringBuilder cleanSql = new StringBuilder();
+                    for (String line : sql.split("\n")) {
+                        line = line.trim();
+                        if (line.startsWith("--") || line.isEmpty()) continue;
+                        cleanSql.append(line).append(" ");
+                    }
+                    String[] statements = cleanSql.toString().split(";");
                     for (String statement : statements) {
                         String trimmed = statement.trim();
-                        if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
-                            stmt.execute(trimmed);
+                        if (!trimmed.isEmpty() && trimmed.length() > 5) {
+                            try {
+                                stmt.execute(trimmed);
+                            } catch (SQLException e) {
+                                // Ignore duplicate/if not exists errors
+                                if (!e.getMessage().contains("already exists") && 
+                                    !e.getMessage().contains("duplicate") &&
+                                    !e.getMessage().contains("IF NOT EXISTS")) {
+                                    System.out.println("Warning: " + e.getMessage());
+                                }
+                            }
                         }
                     }
                     System.out.println("Migration completed: " + migrationFile);
@@ -232,5 +249,79 @@ public class DatabaseManager {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static String hashPassword(String password) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-384");
+            byte[] hash = digest.digest(password.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-384 not available", e);
+        }
+    }
+
+    public static boolean registerUser(String login, String password) {
+        String postgresqlUrl = getDatabaseUrl();
+        String jdbcUrl = buildJdbcUrl(postgresqlUrl);
+        String[] creds = extractCredentials(postgresqlUrl);
+        
+        String passwordHash = hashPassword(password);
+        String sql = "INSERT INTO users (login, password_hash) VALUES (?, ?)";
+        
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, login);
+            pstmt.setString(2, passwordHash);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Failed to register user: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean validateUser(String login, String password) {
+        String postgresqlUrl = getDatabaseUrl();
+        String jdbcUrl = buildJdbcUrl(postgresqlUrl);
+        String[] creds = extractCredentials(postgresqlUrl);
+        
+        String passwordHash = hashPassword(password);
+        String sql = "SELECT password_hash FROM users WHERE login = ?";
+        
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, login);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                String storedHash = rs.getString("password_hash");
+                return storedHash.equals(passwordHash);
+            }
+        } catch (SQLException e) {
+            System.err.println("Failed to validate user: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public static boolean userExists(String login) {
+        String postgresqlUrl = getDatabaseUrl();
+        String jdbcUrl = buildJdbcUrl(postgresqlUrl);
+        String[] creds = extractCredentials(postgresqlUrl);
+        
+        String sql = "SELECT login FROM users WHERE login = ?";
+        
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, login);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            System.err.println("Failed to check user exists: " + e.getMessage());
+        }
+        return false;
     }
 }

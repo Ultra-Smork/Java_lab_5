@@ -29,6 +29,8 @@ import java.util.*;
  * - Commands with args only (remove_by_id, remove_greater, etc.): get args from request
  * - Commands with data (add, add_if_min): get object from request.data
  * - Commands with both args and data (update): get id from args, object from data
+ * 
+ * Uses new Thread (java.lang.Thread) for request processing.
  */
 public class RequestHandler {
     /** Registry that holds all available commands and executes them */
@@ -57,7 +59,7 @@ public class RequestHandler {
 
     /**
      * Processes an incoming request and generates a response.
-     * This is the main entry point for handling any request.
+     * Uses new Thread (java.lang.Thread) for processing.
      * 
      * @param request The incoming request from client
      * @param clientInfo Client IP and port for logging
@@ -69,6 +71,7 @@ public class RequestHandler {
 
     /**
      * Processes an incoming request and generates a response with client channel for notifications.
+     * Uses new Thread (java.lang.Thread) for processing.
      * 
      * @param request The incoming request from client
      * @param clientInfo Client IP and port for logging
@@ -228,7 +231,11 @@ public class RequestHandler {
             
             if (response.isSuccess() && MODIFYING_COMMANDS.contains(command)) {
                 // Save to database after modifications
-                MinHeap.getInstance().saveToDatabase();
+                boolean saved = MinHeap.getInstance().saveToDatabase();
+                if (!saved) {
+                    LoggingMiddleware.logError(clientInfo, "Failed to save to database after " + command, null);
+                    return Response.error("Command executed but failed to persist to database");
+                }
                 
                 String notification = getNotificationMessage(command);
                 response.setNotification(notification);
