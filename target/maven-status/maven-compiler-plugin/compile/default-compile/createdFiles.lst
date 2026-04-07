@@ -23,7 +23,6 @@ com/server/network/AsyncServer$1.class
 com/commands/RemoveByIdCommand.class
 com/server/network/AsyncServer$4.class
 com/server/CommandHistory.class
-com/client/SqlQueryBuilder.class
 com/commands/ParticipantsByIdCommand.class
 com/client/network/AsyncClient.class
 com/commands/ListMetaData.class

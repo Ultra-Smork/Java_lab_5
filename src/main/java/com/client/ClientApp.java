@@ -881,7 +881,7 @@ public class ClientApp {
     }
     
     private static String executeShow(AsyncClient client) throws Exception {
-        String sql = SqlQueryBuilder.buildSelectAll();
+        String sql = "SELECT * FROM music_bands ORDER BY name";
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "SELECT");
@@ -962,7 +962,7 @@ public class ClientApp {
     }
     
     private static String executeRemoveById(AsyncClient client, Long id) throws Exception {
-        String sql = SqlQueryBuilder.buildDelete(id);
+        String sql = "DELETE FROM music_bands WHERE id = " + id;
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "DELETE");
@@ -976,7 +976,7 @@ public class ClientApp {
     }
     
     private static String executeRemoveGreater(AsyncClient client, Long id) throws Exception {
-        String sql = SqlQueryBuilder.buildRemoveGreaterThanId(id);
+        String sql = "DELETE FROM music_bands WHERE id > " + id;
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "DELETE");
@@ -990,7 +990,7 @@ public class ClientApp {
     }
     
     private static String executeRemoveByBestAlbum(AsyncClient client, String album) throws Exception {
-        String sql = SqlQueryBuilder.buildRemoveByBestAlbum(album);
+        String sql = "DELETE FROM music_bands WHERE album_name = '" + album.replace("'", "''") + "'";
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "DELETE");
@@ -1004,7 +1004,7 @@ public class ClientApp {
     }
     
     private static String executeCountByParticipants(AsyncClient client, Integer count) throws Exception {
-        String sql = SqlQueryBuilder.buildCountByParticipants(count);
+        String sql = "SELECT COUNT(*) FROM music_bands WHERE number_of_participants = " + count;
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "SELECT");
@@ -1018,7 +1018,7 @@ public class ClientApp {
     }
     
     private static String executeAverageParticipants(AsyncClient client) throws Exception {
-        String sql = SqlQueryBuilder.buildAverageParticipants();
+        String sql = "SELECT AVG(number_of_participants) FROM music_bands";
         Map<String, Object> args = new HashMap<>();
         args.put("sql", sql);
         args.put("operation", "SELECT");
