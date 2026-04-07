@@ -19,12 +19,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Non-blocking TCP server using Java NIO (New I/O).
- * 
+ *
  * This server accepts client connections and processes requests
  * using asynchronous I/O operations. Unlike traditional blocking
  * servers, this can handle many concurrent connections without
  * creating a thread for each client.
- * 
+ *
  * Key features:
  * - Uses AsynchronousServerSocketChannel for non-blocking accept
  * - Uses AsynchronousSocketChannel for non-blocking read/write
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * - Uses ForkJoinPool for multi-threaded request reading
  * - Uses Thread for request processing
  * - Uses CachedThreadPool for response sending
- * 
+ *
  * Communication flow:
  * 1. Server starts and listens on specified port
  * 2. Client connects via AsynchronousSocketChannel
@@ -44,28 +44,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AsyncServer {
     /** Port number to listen on */
     private final int port;
-    
+
     /** Flag to control server running state */
     private final AtomicBoolean running = new AtomicBoolean(false);
-    
+
     /** When the server started (used for calculating uptime) */
     private final LocalDateTime startTime = LocalDateTime.now();
-    
+
     /** Set of all connected clients - uses ConcurrentHashMap for thread safety */
     private final Set<AsynchronousSocketChannel> clients = ConcurrentHashMap.newKeySet();
-    
+
     /** The server channel that accepts incoming connections */
     private AsynchronousServerSocketChannel serverChannel;
-    
+
     /** Handler that processes requests and generates responses */
     private final RequestHandler requestHandler;
-    
+
     /** CachedThreadPool for multi-threaded response sending */
     private final ExecutorService responseExecutor;
 
     /**
      * Creates a new server on the specified port.
-     * 
+     *
      * @param port The port number to listen on (e.g., 8080)
      */
     public AsyncServer(int port) {
@@ -78,21 +78,21 @@ public class AsyncServer {
      * Starts the server and begins accepting clients.
      * This is a non-blocking operation - the method returns immediately
      * while the server continues running in background.
-     * 
+     *
      * @throws IOException If the server cannot bind to the port
      */
     public void start() throws IOException {
         // Open a non-blocking server socket channel
         serverChannel = AsynchronousServerSocketChannel.open();
-        
+
         // Bind to the specified port
         serverChannel.bind(new InetSocketAddress(port));
-        
+
         // Mark server as running
         running.set(true);
 
         System.out.println("Server started on port " + port);
-        
+
         // Start accepting clients (runs in background)
         acceptClients();
     }
@@ -131,28 +131,28 @@ public class AsyncServer {
     /**
      * Handles communication with a single client.
      * This includes reading requests, processing them, and sending responses.
-     * 
+     *
      * @param clientChannel The channel for communicating with this client
      */
     private void handleClient(AsynchronousSocketChannel clientChannel) {
         // Get client info for logging
         String clientInfo = getClientInfo(clientChannel);
-        
+
         // Add client to connected set
         clients.add(clientChannel);
         System.out.println("Client connected. Active connections: " + clients.size());
-        
+
         // Log client connection
         LoggingMiddleware.logClientConnected(clientInfo);
 
         // Start reading with a fresh buffer for this client
         readRequest(clientChannel, clientInfo);
     }
-    
+
     private void readRequest(AsynchronousSocketChannel clientChannel, String clientInfo) {
         // Create a fresh buffer for each read operation to avoid thread issues
         ByteBuffer buffer = ByteBuffer.allocate(8192);
-        
+
         // Use native async read (AsynchronousSocketChannel handles internally)
         try {
             clientChannel.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
@@ -163,10 +163,10 @@ public class AsyncServer {
                         closeClient(clientChannel, clientInfo);
                         return;
                     }
-                    
+
                     // Prepare buffer for reading
                     attachment.flip();
-                    
+
                     // Convert buffer bytes to byte array
                     byte[] data = new byte[attachment.remaining()];
                     attachment.get(data);
@@ -174,7 +174,7 @@ public class AsyncServer {
                     try {
                         // Deserialize the request
                         Request request = Serializer.deserialize(data);
-                        
+
                         // Process request in a new Thread
                         Thread processingThread = new Thread(() -> {
                             try {
@@ -186,7 +186,7 @@ public class AsyncServer {
                             }
                         });
                         processingThread.start();
-                        
+
                     } catch (Exception e) {
                         // Handle errors during request processing
                         System.err.println("Error handling request: " + e.getMessage());
@@ -196,7 +196,7 @@ public class AsyncServer {
                         sendErrorResponse(clientChannel, errorResp, clientInfo);
                     }
                 }
-                
+
                 @Override
                 public void failed(Throwable exc, ByteBuffer attachment) {
                     // Handle closed channel or other errors gracefully
@@ -214,14 +214,14 @@ public class AsyncServer {
             closeClient(clientChannel, clientInfo);
         }
     }
-    
+
     private void sendResponse(AsynchronousSocketChannel clientChannel, Response response, String clientInfo) {
         // Use CachedThreadPool for sending response
         responseExecutor.submit(() -> {
             try {
                 // Serialize the response
                 byte[] responseData = Serializer.serialize(response);
-                
+
                 // Send response back to client
                 ByteBuffer responseBuffer = ByteBuffer.wrap(responseData);
                 clientChannel.write(responseBuffer, responseBuffer, new CompletionHandler<Integer, ByteBuffer>() {
@@ -253,7 +253,7 @@ public class AsyncServer {
             }
         });
     }
-    
+
     private void sendErrorResponse(AsynchronousSocketChannel clientChannel, Response response, String clientInfo) {
         responseExecutor.submit(() -> {
             try {
@@ -271,7 +271,7 @@ public class AsyncServer {
      * Continues reading from a client after processing a request.
      * This creates a loop that keeps processing requests from the same client
      * until they disconnect using ForkJoinPool for reading.
-     * 
+     *
      * @param clientChannel The channel to read from
      * @param clientInfo Client IP and port for logging
      */
@@ -281,7 +281,7 @@ public class AsyncServer {
 
     /**
      * Gets client information (IP and port) from the channel.
-     * 
+     *
      * @param channel The client channel
      * @return String in format "IP:port" or "unknown" if unavailable
      */
@@ -299,7 +299,7 @@ public class AsyncServer {
 
     /**
      * Closes a client connection and removes them from the active set.
-     * 
+     *
      * @param clientChannel The client connection to close
      * @param clientInfo Client IP and port for logging
      */
@@ -318,16 +318,16 @@ public class AsyncServer {
     /**
      * Gets current server statistics.
      * This is called when a client sends a HEALTH request.
-     * 
+     *
      * @return ServerStats containing current server state
      */
     public ServerStats getStats() {
         // Get JVM memory info
         Runtime runtime = Runtime.getRuntime();
-        
+
         // Calculate uptime in milliseconds
         long uptime = System.currentTimeMillis() - startTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-        
+
         // Create and return stats object
         return new ServerStats(
             uptime,
@@ -341,12 +341,12 @@ public class AsyncServer {
 
     /**
      * Stops the server and disconnects all clients.
-     * 
+     *
      * @throws IOException If there's an error closing the server
      */
     public void stop() throws IOException {
         running.set(false);
-        
+
         // Close all client connections
         for (AsynchronousSocketChannel client : clients) {
             try {
@@ -356,7 +356,7 @@ public class AsyncServer {
             }
         }
         clients.clear();
-        
+
         // Close the server channel
         if (serverChannel != null) {
             serverChannel.close();
@@ -366,7 +366,7 @@ public class AsyncServer {
 
     /**
      * Checks if the server is currently running.
-     * 
+     *
      * @return true if server is running, false otherwise
      */
     public boolean isRunning() {
@@ -375,7 +375,7 @@ public class AsyncServer {
 
     /**
      * Gets the port number the server is listening on.
-     * 
+     *
      * @return The port number
      */
     public int getPort() {
