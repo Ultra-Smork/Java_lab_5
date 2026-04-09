@@ -5,7 +5,36 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="384594ea-97da-48df-9c72-d91e8fa2f91e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.classpath" beforeDir="false" afterPath="$PROJECT_DIR$/.classpath" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.settings/org.eclipse.jdt.core.prefs" beforeDir="false" afterPath="$PROJECT_DIR$/.settings/org.eclipse.jdt.core.prefs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/client/ClientApp.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/client/ClientApp.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/client/network/AsyncClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/client/network/AsyncClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/common/Request.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/common/Request.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/common/Response.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/common/Response.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/server/ServerApp.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/server/ServerApp.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/server/network/AsyncServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/server/network/AsyncServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/server/network/RequestHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/server/network/RequestHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/utils/CommandRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/utils/CommandRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/client/ClientApp.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/client/ClientApp.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/client/network/AsyncClient.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/client/network/AsyncClient.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/common/Request$RequestType.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/common/Request$RequestType.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/common/Response.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/common/Response.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/server/ServerApp.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/server/ServerApp.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/server/network/AsyncServer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/server/network/RequestHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/server/network/RequestHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/utils/CommandRegistry.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/utils/CommandRegistry.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/my-app-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/target/my-app-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/s410022@helios.se.ifmo.ru" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/surefire-reports/TEST-com.example.AppTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/target/surefire-reports/TEST-com.example.AppTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/surefire-reports/com.example.AppTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/target/surefire-reports/com.example.AppTest.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/com/example/AppTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/test-classes/com/example/AppTest.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,28 +56,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.App.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "master",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/ultrasmork/CHEEEEL",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.App.executor&quot;: &quot;Run&quot;,
+    &quot;Application.ClientApp.executor&quot;: &quot;Run&quot;,
+    &quot;Application.ServerApp.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/ultrasmork/CHEEEEL&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -66,7 +97,10 @@
       <updated>1771024927688</updated>
       <workItem from="1771024948010" duration="219000" />
       <workItem from="1772256553798" duration="24000" />
-      <workItem from="1773588028105" duration="327000" />
+      <workItem from="1773588028105" duration="3875000" />
+      <workItem from="1774957144737" duration="18000" />
+      <workItem from="1774958710436" duration="27000" />
+      <workItem from="1774958793480" duration="113000" />
     </task>
     <servers />
   </component>

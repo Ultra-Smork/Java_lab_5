@@ -1,6 +1,5 @@
 package com;
 
-import com.cli.CliRunner;
 import com.server.ServerApp;
 import com.client.ClientApp;
 import com.client.network.HealthChecker;
@@ -10,13 +9,13 @@ import com.client.network.HealthChecker;
  * 
  * This class determines which mode to run in based on command line arguments:
  * 
- * 1. No arguments: Run in CLI mode (original local mode)
+ * 1. No arguments: Run in client mode (connects to server on localhost:8080)
  * 2. --server: Start the server (listens for client connections)
  * 3. --client: Start the client (connects to server)
  * 4. --check-health: Check if server is running and healthy
  * 
  * Examples:
- *   java -jar app.jar                    # CLI mode
+ *   java -jar app.jar                    # Client mode (default)
  *   java -jar app.jar --server           # Start server on port 8080
  *   java -jar app.jar --server --port 9000 # Start server on port 9000
  *   java -jar app.jar --client           # Connect to localhost:8080
@@ -36,9 +35,9 @@ public class App {
      * @param args Command line arguments
      */
     public static void main(String[] args) {
-        // No arguments = run CLI mode (original behavior)
+        // No arguments = run client mode (default)
         if (args.length == 0) {
-            CliRunner.start();
+            ClientApp.start(DEFAULT_HOST, DEFAULT_PORT);
             return;
         }
 
@@ -112,7 +111,7 @@ public class App {
             default: {
                 // Unknown mode - print usage information
                 System.out.println("Usage:");
-                System.out.println("  java -jar app.jar                    # Run in CLI mode");
+                System.out.println("  java -jar app.jar                    # Run in client mode (default)");
                 System.out.println("  java -jar app.jar --server [--port]  # Start server");
                 System.out.println("  java -jar app.jar --client [--host] [--port] # Connect to server");
                 System.out.println("  java -jar app.jar --check-health [--host] [--port] # Check server health");

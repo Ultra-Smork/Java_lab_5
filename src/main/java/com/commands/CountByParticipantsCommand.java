@@ -1,34 +1,17 @@
 package com.commands;
 
+import com.common.Response;
 import com.utils.MinHeap;
-import com.utils.Command;
+import java.util.Map;
 
-/**
- * Command implementation for counting elements by number of participants.
- * This command counts how many music bands in the collection have exactly
- * the specified number of participants.
- */
-public class CountByParticipantsCommand implements Command {
-    /** Reference to the singleton MinHeap instance */
-    private MinHeap heap = MinHeap.getInstance();
-    /** The target number of participants to count */
-    private Integer targetCount;
-
-    /**
-     * Constructs a CountByParticipantsCommand with the specified target count.
-     *
-     * @param targetCount the number of participants to search for
-     */
-    public CountByParticipantsCommand(Integer targetCount) {
-        this.targetCount = targetCount;
-    }
-
-    /**
-     * Executes the count_by_number_of_participants command.
-     */
+public class CountByParticipantsCommand implements ServerCommand {
     @Override
-    public void execute() {
-        int count = heap.countByNumberOfParticipants(targetCount);
-        System.out.println("Number of elements with " + targetCount + " participants: " + count);
+    public Response execute(Map<String, Object> args) {
+        if (args == null || args.get("count") == null) {
+            return Response.error("Missing count for count_by_number_of_participants command");
+        }
+        int count = ((Number) args.get("count")).intValue();
+        int result = MinHeap.getInstance().countByNumberOfParticipants(count);
+        return Response.success("Number of bands with " + count + " participants: " + result);
     }
 }
