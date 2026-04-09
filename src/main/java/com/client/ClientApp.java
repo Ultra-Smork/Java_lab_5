@@ -2,8 +2,8 @@ package com.client;
 
 import com.client.handlers.CommandDispatcher;
 import com.client.network.AsyncClient;
-import com.common.Request;
-import com.common.Request.RequestType;
+import com.common.Command;
+import com.common.RequestBuilder;
 import com.common.Response;
 import com.model.MusicBand;
 
@@ -104,12 +104,13 @@ public class ClientApp {
                         // Send the updated band back to server with retry
                         Response updateResponse = sendWithRetry(client, () -> {
                             try {
-                                Request updateRequest = new Request(RequestType.COMMAND, "update");
-                                Map<String, Object> args = new HashMap<>();
-                                args.put("id", existing.getId());
-                                args.put("band", updated);
-                                updateRequest.setArgs(args);
-                                return client.send(updateRequest);
+                                return client.send(
+                                    RequestBuilder.command(Command.UPDATE)
+                                        .withArg("id", existing.getId())
+                                        .withData(updated)
+                                        .withAuth()
+                                        .build()
+                                );
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
@@ -265,17 +266,11 @@ public class ClientApp {
      */
     private static void printHealth(AsyncClient client) {
         try {
-            // Create health request
-            Request healthRequest = new Request(Request.RequestType.HEALTH, "health");
+            Response response = client.send(RequestBuilder.health().build());
             
-            // Send and get response
-            Response response = client.send(healthRequest);
-            
-            // Check if response is successful
             if (response.isSuccess() && response.getStats() != null) {
                 com.common.ServerStats stats = response.getStats();
                 
-                // Print server statistics
                 System.out.println("Server Status: " + (stats.isHealthy() ? "HEALTHY" : "UNHEALTHY"));
                 System.out.println("Uptime: " + stats.getUptimeFormatted());
                 System.out.println("Memory: " + stats.getMemoryFormatted());

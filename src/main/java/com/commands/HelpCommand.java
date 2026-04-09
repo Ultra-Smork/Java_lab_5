@@ -1,32 +1,42 @@
 package com.commands;
-import com.utils.Command;
 
-/**
- * Command implementation for displaying help information.
- * This command displays a list of all available commands and their usage.
- */
-public class HelpCommand implements Command{
-    /**
-     * Executes the help command, displaying all available commands.
-     */
+import com.common.Response;
+import java.util.Map;
+
+public class HelpCommand implements ServerCommand {
     @Override
-    public void execute() {
-        System.out.println("Available commands:");
-        System.out.println("help                                    - Show this help message");
-        System.out.println("info                                    - Show information about the collection");
-        System.out.println("show                                    - Show all elements in the collection");
-        System.out.println("add                                     - Add a new element to the collection");
-        System.out.println("update id <id>                          - Update element by ID");
-        System.out.println("remove_by_id <id>                       - Remove element by ID");
-        System.out.println("clear                                   - Clear the collection");
-        System.out.println("save                                    - Save collection to file");
-        System.out.println("execute_script <file_name>             - Execute commands from script file");
-        System.out.println("exit                                    - Exit the application");
-        System.out.println("add_if_min                              - Add element if it's less than minimum");
-        System.out.println("remove_greater <id>                    - Remove elements with ID greater than given");
-        System.out.println("history                                 - Show command history");
-        System.out.println("remove_any_by_best_album <album_name>   - Remove element by best album name");
-        System.out.println("average_of_number_of_participants      - Show average number of participants");
-        System.out.println("count_by_number_of_participants <num>  - Count elements with given number of participants");
+    public Response execute(Map<String, Object> args) {
+        String help = 
+            "=== MUSIC BAND COLLECTION COMMANDS ===\n\n" +
+            "AUTHENTICATION (no login required):\n" +
+            "  register <login> <password>    - Create a new user account\n" +
+            "  login <login> <password>      - Authenticate to access modify commands\n\n" +
+            
+            "VIEW COMMANDS (no login required):\n" +
+            "  show                         - Display all music bands sorted by name\n" +
+            "  info                         - Display collection information\n" +
+            "  help                         - Display this help message\n" +
+            "  history                      - Display command history\n" +
+            "  count_by_number_of_participants <count> - Count bands with N participants\n" +
+            "  participants_by_id <id>     - Show participants for band with ID\n" +
+            "  average_of_number_of_participants - Show average participants count\n\n" +
+            
+            "MODIFY COMMANDS (login required, modify own bands only):\n" +
+            "  add                          - Add a new music band (interactive)\n" +
+            "  add_if_min <id>              - Add band if ID is less than minimum\n" +
+            "  update id <id>              - Update band with specified ID\n" +
+            "  remove_by_id <id>           - Remove band with specified ID\n" +
+            "  remove_greater <id>         - Remove bands with ID greater than N\n" +
+            "  remove_any_by_best_album <album> - Remove bands with specified album\n" +
+            "  clear                       - Remove all your bands from collection\n" +
+            "  execute_script <file_path>  - Execute commands from script file\n\n" +
+            
+            "EXAMPLES:\n" +
+            "  register alice password123   - Create user 'alice'\n" +
+            "  login alice password123      - Login as alice\n" +
+            "  add                         - Add a new band (interactive)\n" +
+            "  update id 123               - Update band with ID 123\n" +
+            "  execute_script ~/scripts.txt - Run commands from file\n";
+        return Response.success(help);
     }
 }

@@ -1,5 +1,6 @@
 package com.server.network;
 
+import com.auth.AuthorizationService;
 import com.common.*;
 import com.utils.MinHeap;
 import com.utils.CommandRegistry;

@@ -251,26 +251,11 @@ public class DatabaseManager {
         }
     }
 
-    public static String hashPassword(String password) {
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-384");
-            byte[] hash = digest.digest(password.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-384 not available", e);
-        }
-    }
-
-    public static boolean registerUser(String login, String password) {
+    public static boolean registerUser(String login, String passwordHash) {
         String postgresqlUrl = getDatabaseUrl();
         String jdbcUrl = buildJdbcUrl(postgresqlUrl);
         String[] creds = extractCredentials(postgresqlUrl);
         
-        String passwordHash = hashPassword(password);
         String sql = "INSERT INTO users (login, password_hash) VALUES (?, ?)";
         
         try (Connection conn = DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);
@@ -285,12 +270,11 @@ public class DatabaseManager {
         }
     }
 
-    public static boolean validateUser(String login, String password) {
+    public static boolean validateUser(String login, String passwordHash) {
         String postgresqlUrl = getDatabaseUrl();
         String jdbcUrl = buildJdbcUrl(postgresqlUrl);
         String[] creds = extractCredentials(postgresqlUrl);
         
-        String passwordHash = hashPassword(password);
         String sql = "SELECT password_hash FROM users WHERE login = ?";
         
         try (Connection conn = DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);

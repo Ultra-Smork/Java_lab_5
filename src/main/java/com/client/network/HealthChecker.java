@@ -1,7 +1,6 @@
 package com.client.network;
 
-import com.common.Request;
-import com.common.Request.RequestType;
+import com.common.RequestBuilder;
 import com.common.Response;
 import com.common.ServerStats;
 
@@ -47,19 +46,13 @@ public class HealthChecker {
     public boolean check() {
         AsyncClient client = new AsyncClient(host, port);
         try {
-            // Connect to server
             if (!client.connect()) {
                 return false;
             }
 
-            // Send health request
-            Request request = new Request(Request.RequestType.HEALTH, "health");
-            Response response = client.send(request);
-
-            // Check if healthy
+            Response response = client.send(RequestBuilder.health().build());
             return response.isSuccess() && response.getStats() != null && response.getStats().isHealthy();
         } catch (Exception e) {
-            // Any exception means unhealthy
             return false;
         } finally {
             client.disconnect();
@@ -74,15 +67,11 @@ public class HealthChecker {
     public ServerStats getStats() {
         AsyncClient client = new AsyncClient(host, port);
         try {
-            // Connect to server
             if (!client.connect()) {
                 return null;
             }
 
-            // Send health request
-            Request request = new Request(Request.RequestType.HEALTH, "health");
-            Response response = client.send(request);
-
+            Response response = client.send(RequestBuilder.health().build());
             return response.getStats();
         } catch (Exception e) {
             return null;
@@ -102,7 +91,6 @@ public class HealthChecker {
         String host = "localhost";
         int port = 8080;
 
-        // Parse arguments
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--host") && i + 1 < args.length) {
                 host = args[++i];
@@ -116,12 +104,10 @@ public class HealthChecker {
             }
         }
 
-        // Create checker and get stats
         HealthChecker checker = new HealthChecker(host, port);
         ServerStats stats = checker.getStats();
 
         if (stats != null) {
-            // Print server statistics
             System.out.println("Server Status: " + (stats.isHealthy() ? "HEALTHY" : "UNHEALTHY"));
             System.out.println("Uptime: " + stats.getUptimeFormatted());
             System.out.println("Memory: " + stats.getMemoryFormatted());
