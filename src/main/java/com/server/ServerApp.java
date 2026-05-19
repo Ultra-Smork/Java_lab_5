@@ -29,6 +29,10 @@ public class ServerApp {
      * @param port The port number to listen on
      */
     public static void start(int port) {
+        if (Boolean.getBoolean("app.embedded")) {
+            DatabaseManager.setEmbeddedMode(true);
+        }
+
         System.out.println("Starting MusicBand Server on port " + port + "...");
         
         // Initialize the database

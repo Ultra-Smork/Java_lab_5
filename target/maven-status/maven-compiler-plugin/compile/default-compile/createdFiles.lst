@@ -26,6 +26,7 @@ com/commands/LoginCommand.class
 com/commands/HelpCommand.class
 com/common/Command.class
 com/commands/CountByParticipantsCommand.class
+com/client/gui/CollectionCanvas.class
 com/commands/SelectCommand.class
 com/server/network/RequestHandler.class
 com/utils/CollectionFileManager$LoadResult.class
@@ -61,6 +62,7 @@ com/utils/CommandRegistry.class
 com/server/LoggingMiddleware.class
 com/client/ClientApp.class
 com/utils/CollectionFileManager.class
+com/client/gui/CollectionCanvas$Nudge.class
 com/model/MusicBand.class
 com/client/handlers/script/ScriptAuthChecker.class
 com/commands/UpdateCommand.class

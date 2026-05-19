@@ -18,12 +18,15 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -60,6 +63,10 @@ public class MainController {
     @FXML private TextField filterSales;
     @FXML private TextField filterOwner;
     @FXML private TextField filterCreated;
+
+    @FXML private CollectionCanvas collectionCanvas;
+    @FXML private StackPane canvasContainer;
+    @FXML private SplitPane splitPane;
 
     private BandTableManager tableManager;
     private ScheduledExecutorService scheduler;
@@ -122,6 +129,14 @@ public class MainController {
             }
         });
 
+        // Bind canvas to container size
+        collectionCanvas.widthProperty().bind(canvasContainer.widthProperty());
+        collectionCanvas.heightProperty().bind(canvasContainer.heightProperty());
+
+        // Keep split pane divider at 50% on any resize
+        splitPane.widthProperty().addListener((obs, ov, nv) ->
+            splitPane.setDividerPositions(0.5));
+
         // Start polling
         client = new AsyncClient(MainApplication.getServerHost(), MainApplication.getServerPort());
         startPolling();
@@ -144,12 +159,13 @@ public class MainController {
                     List<MusicBand> bands = (List<MusicBand>) response.getData();
                     Platform.runLater(() -> {
                         tableManager.updateBands(bands);
+                        collectionCanvas.updateBands(bands);
                         statusLabel.setText(LocalizationManager.get("main.connected", bands.size()));
                     });
                 }
             } catch (Exception e) {
-                String msg = e.toString() + (e.getCause() != null ? " <- " + e.getCause().getMessage() : "");
-                Platform.runLater(() -> statusLabel.setText(LocalizationManager.get("main.error", msg)));
+                String msg = toUserMessage(e);
+                Platform.runLater(() -> statusLabel.setText(msg));
             }
         }, 0, 3, TimeUnit.SECONDS);
     }
@@ -279,9 +295,13 @@ public class MainController {
         dialog.setHeaderText(LocalizationManager.get("dialog.update.header"));
         dialog.setContentText(LocalizationManager.get("dialog.update.content"));
         dialog.showAndWait().ifPresent(input -> {
+            String trimmed = input.trim();
             try {
-                long id = Long.parseLong(input.trim());
-                if (id <= 0) return;
+                long id = Long.parseLong(trimmed);
+                if (id <= 0) {
+                    showAlert(Alert.AlertType.WARNING, LocalizationManager.get("validation.id.positive"));
+                    return;
+                }
                 new Thread(() -> {
                     try {
                         Response r = client.send(RequestBuilder.command(Command.SELECT)
@@ -298,13 +318,13 @@ public class MainController {
                             });
                         }
                     } catch (Exception e) {
-                        Platform.runLater(() -> {
-                            Alert a = new Alert(Alert.AlertType.ERROR, LocalizationManager.get("main.error", e.getMessage()));
-                            a.show();
-                        });
+                        String err = toUserMessage(e);
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
                     }
                 }).start();
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.WARNING, LocalizationManager.get("validation.id.format"));
+            }
         });
     }
     @FXML private void onRemoveById(ActionEvent event) {
@@ -317,18 +337,30 @@ public class MainController {
         dialog.setHeaderText(LocalizationManager.get("dialog.removeGreater.header"));
         dialog.setContentText(LocalizationManager.get("dialog.removeGreater.content"));
         dialog.showAndWait().ifPresent(input -> {
+            String trimmed = input.trim();
             try {
-                long id = Long.parseLong(input.trim());
-                if (id <= 0) return;
+                long id = Long.parseLong(trimmed);
+                if (id <= 0) {
+                    showAlert(Alert.AlertType.WARNING, LocalizationManager.get("validation.id.positive"));
+                    return;
+                }
                 new Thread(() -> {
                     try {
-                        client.send(RequestBuilder.command(Command.REMOVE_GREATER)
+                        Response r = client.send(RequestBuilder.command(Command.REMOVE_GREATER)
                             .withArg("id", id)
                             .withAuth()
                             .build());
-                    } catch (Exception ignored) {}
+                        if (!r.isSuccess()) {
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, r.getError()));
+                        }
+                    } catch (Exception e) {
+                        String err = toUserMessage(e);
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+                    }
                 }).start();
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.WARNING, LocalizationManager.get("validation.id.format"));
+            }
         });
     }
     @FXML private void onRemoveBestAlbum(ActionEvent event) {
@@ -338,25 +370,44 @@ public class MainController {
         dialog.setContentText(LocalizationManager.get("dialog.removeAlbum.content"));
         dialog.showAndWait().ifPresent(input -> {
             String name = input.trim();
-            if (name.isEmpty()) return;
+            if (name.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, LocalizationManager.get("validation.album.name.empty"));
+                return;
+            }
             new Thread(() -> {
                 try {
-                    client.send(RequestBuilder.command(Command.REMOVE_ANY_BY_BEST_ALBUM)
+                    Response r = client.send(RequestBuilder.command(Command.REMOVE_ANY_BY_BEST_ALBUM)
                         .withArg("album", name)
                         .withAuth()
                         .build());
-                } catch (Exception ignored) {}
+                    if (!r.isSuccess()) {
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, r.getError()));
+                    }
+                } catch (Exception e) {
+                    String err = toUserMessage(e);
+                    Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+                }
             }).start();
         });
     }
     @FXML private void onClear(ActionEvent event) {
-        new Thread(() -> {
-            try {
-                client.send(RequestBuilder.command(Command.CLEAR)
-                    .withAuth()
-                    .build());
-            } catch (Exception ignored) {}
-        }).start();
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, LocalizationManager.get("delete.confirm"));
+        confirm.showAndWait().ifPresent(r -> {
+            if (r != ButtonType.OK) return;
+            new Thread(() -> {
+                try {
+                    Response resp = client.send(RequestBuilder.command(Command.CLEAR)
+                        .withAuth()
+                        .build());
+                    if (!resp.isSuccess()) {
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, resp.getError()));
+                    }
+                } catch (Exception e) {
+                    String err = toUserMessage(e);
+                    Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+                }
+            }).start();
+        });
     }
     @FXML private void onInfo(ActionEvent event) {
         new Thread(() -> {
@@ -365,10 +416,15 @@ public class MainController {
                     .withAuth()
                     .build());
                 Platform.runLater(() -> {
-                    Alert a = new Alert(Alert.AlertType.INFORMATION, r.getResult() != null ? r.getResult() : (r.getError() != null ? r.getError() : LocalizationManager.get("dialog.info.result")));
+                    String content = r.isSuccess() ? r.getResult() : r.getError();
+                    Alert a = new Alert(r.isSuccess() ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR,
+                        content != null ? content : LocalizationManager.get("dialog.info.result"));
                     a.show();
                 });
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                String err = toUserMessage(e);
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+            }
         }).start();
     }
     @FXML private void onHelp(ActionEvent event) {
@@ -378,12 +434,16 @@ public class MainController {
                     .withAuth()
                     .build());
                 Platform.runLater(() -> {
-                    Alert a = new Alert(Alert.AlertType.INFORMATION,
-                        r.getResult() != null ? r.getResult() : (r.getError() != null ? r.getError() : LocalizationManager.get("help.title")));
+                    String content = r.isSuccess() ? r.getResult() : r.getError();
+                    Alert a = new Alert(r.isSuccess() ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR,
+                        content != null ? content : LocalizationManager.get("help.title"));
                     a.setTitle(LocalizationManager.get("help.title"));
                     a.show();
                 });
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                String err = toUserMessage(e);
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+            }
         }).start();
     }
     @FXML private void onHistory(ActionEvent event) {
@@ -393,23 +453,33 @@ public class MainController {
                     .withAuth()
                     .build());
                 Platform.runLater(() -> {
-                    Alert a = new Alert(Alert.AlertType.INFORMATION,
-                        r.getResult() != null ? r.getResult() : (r.getError() != null ? r.getError() : LocalizationManager.get("dialog.history.result")));
+                    String content = r.isSuccess() ? r.getResult() : r.getError();
+                    Alert a = new Alert(r.isSuccess() ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR,
+                        content != null ? content : LocalizationManager.get("dialog.history.result"));
                     a.setTitle(LocalizationManager.get("dialog.history.title"));
                     a.show();
                 });
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                String err = toUserMessage(e);
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+            }
         }).start();
     }
 
     private void executeRemove(long id) {
         new Thread(() -> {
             try {
-                client.send(RequestBuilder.command(Command.REMOVE_BY_ID)
+                Response r = client.send(RequestBuilder.command(Command.REMOVE_BY_ID)
                     .withArg("id", id)
                     .withAuth()
                     .build());
-            } catch (Exception ignored) {}
+                if (!r.isSuccess()) {
+                    Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, r.getError()));
+                }
+            } catch (Exception e) {
+                String err = toUserMessage(e);
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, err));
+            }
         }).start();
     }
 
@@ -504,5 +574,21 @@ public class MainController {
     private void showAlert(Alert.AlertType type, String msg) {
         Alert a = new Alert(type, msg);
         a.show();
+    }
+
+    private String toUserMessage(Exception e) {
+        if (e instanceof ClosedChannelException) {
+            return LocalizationManager.get("server.disconnected");
+        }
+        String msg = e.getMessage();
+        if (msg == null) return LocalizationManager.get("server.error");
+        String lower = msg.toLowerCase();
+        if (lower.contains("not connected") || lower.contains("connection refused")
+            || lower.contains("connect refused") || lower.contains("server closed")
+            || lower.contains("failed to connect") || lower.contains("timeout")
+            || lower.contains("connection reset") || lower.contains("broken pipe")) {
+            return LocalizationManager.get("server.disconnected");
+        }
+        return LocalizationManager.get("server.error");
     }
 }

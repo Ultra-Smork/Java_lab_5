@@ -6,12 +6,15 @@ import com.client.ClientApp;
 import com.client.gui.MainApplication;
 import com.client.network.HealthChecker;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class App {
     private static final int DEFAULT_PORT = 8080;
     private static final String DEFAULT_HOST = "localhost";
+
+    private static Process serverProcess;
 
     public static void main(String[] args) {
         String host = DEFAULT_HOST;
@@ -85,16 +88,14 @@ public class App {
 
         DatabaseManager.setEmbeddedMode(true);
 
-        Thread serverThread = new Thread(() -> {
-            try {
-                ServerApp.start(port);
-            } catch (Exception e) {
-                System.err.println("Local server failed: " + e.getMessage());
-                System.exit(1);
-            }
-        });
-        serverThread.setDaemon(true);
-        serverThread.start();
+        try {
+            startServerProcess(port);
+        } catch (Exception e) {
+            System.err.println("Failed to start server process: " + e.getMessage());
+            return;
+        }
+
+        installSigintHandler();
 
         try {
             Thread.sleep(1500);
@@ -110,6 +111,72 @@ public class App {
             MainApplication.setServerHost("localhost");
             MainApplication.setServerPort(port);
             MainApplication.main(new String[0]);
+        }
+
+        if (serverProcess != null && serverProcess.isAlive()) {
+            serverProcess.destroy();
+        }
+    }
+
+    private static void startServerProcess(int port) throws Exception {
+        String javaHome = System.getProperty("java.home");
+        String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
+        String classpath = System.getProperty("java.class.path");
+
+        List<String> cmd = new ArrayList<>();
+        cmd.add(javaBin);
+        cmd.add("-cp");
+        cmd.add(classpath);
+        cmd.add("-Dapp.embedded=true");
+        cmd.add("com.server.ServerApp");
+        cmd.add(String.valueOf(port));
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
+
+        serverProcess = pb.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (serverProcess != null && serverProcess.isAlive()) {
+                serverProcess.destroy();
+            }
+        }));
+    }
+
+    private static volatile long lastSigintTime = 0;
+    private static final long FORCE_EXIT_THRESHOLD_MS = 3000;
+
+    private static void installSigintHandler() {
+        try {
+            Class<?> signalClass = Class.forName("sun.misc.Signal");
+            Class<?> handlerClass = Class.forName("sun.misc.SignalHandler");
+            Object intSignal = signalClass.getConstructor(String.class).newInstance("INT");
+            Object handler = java.lang.reflect.Proxy.newProxyInstance(
+                handlerClass.getClassLoader(),
+                new Class[]{handlerClass},
+                (proxy, method, methodArgs) -> {
+                    if (method.getName().equals("handle")) {
+                        long now = System.currentTimeMillis();
+                        if (now - lastSigintTime < FORCE_EXIT_THRESHOLD_MS) {
+                            System.out.println("\nForce exiting...");
+                            if (serverProcess != null && serverProcess.isAlive()) {
+                                serverProcess.destroy();
+                            }
+                            System.exit(0);
+                        }
+                        lastSigintTime = now;
+                        System.out.println("\n[Server stopped. GUI continues in offline mode.]");
+                        System.out.println("[Close the window to exit, or press Ctrl+C again to force quit.]");
+                    }
+                    return null;
+                }
+            );
+            signalClass.getMethod("handle", signalClass, handlerClass)
+                .invoke(null, intSignal, handler);
+        } catch (Exception e) {
+            System.err.println("Warning: Could not install Ctrl+C handler: " + e.getMessage());
         }
     }
 }

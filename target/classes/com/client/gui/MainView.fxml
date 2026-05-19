@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.client.gui.CollectionCanvas?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
@@ -31,36 +32,41 @@
     </top>
 
     <center>
-        <VBox style="-fx-padding: 5;">
-            <HBox spacing="5" style="-fx-padding: 2;">
-                <TextField fx:id="filterId" promptText="ID" prefWidth="70"/>
-                <TextField fx:id="filterName" promptText="Name" prefWidth="100"/>
-                <TextField fx:id="filterX" promptText="X" prefWidth="50"/>
-                <TextField fx:id="filterY" promptText="Y" prefWidth="50"/>
-                <TextField fx:id="filterParticipants" promptText="Participants" prefWidth="70"/>
-                <TextField fx:id="filterGenre" promptText="Genre" prefWidth="80"/>
-                <TextField fx:id="filterAlbum" promptText="Album" prefWidth="100"/>
-                <TextField fx:id="filterSales" promptText="Sales" prefWidth="60"/>
-                <TextField fx:id="filterOwner" promptText="Owner" prefWidth="80"/>
-                <TextField fx:id="filterCreated" promptText="Created" prefWidth="100"/>
-            </HBox>
-            <TableView fx:id="bandTable" editable="false"
-                       style="-fx-background-color: #2d2d2d; -fx-table-cell-border-color: #3d3d3d;"
-                       onMouseClicked="#onTableClick">
-                <columns>
-                    <TableColumn fx:id="colId" text="%table.id" prefWidth="70"/>
-                    <TableColumn fx:id="colName" text="%table.name" prefWidth="100"/>
-                    <TableColumn fx:id="colX" text="%table.x" prefWidth="50"/>
-                    <TableColumn fx:id="colY" text="%table.y" prefWidth="50"/>
-                    <TableColumn fx:id="colParticipants" text="%table.participants" prefWidth="70"/>
-                    <TableColumn fx:id="colGenre" text="%table.genre" prefWidth="80"/>
-                    <TableColumn fx:id="colAlbum" text="%table.album" prefWidth="100"/>
-                    <TableColumn fx:id="colSales" text="%table.sales" prefWidth="60"/>
-                    <TableColumn fx:id="colOwner" text="%table.owner" prefWidth="80"/>
-                    <TableColumn fx:id="colCreated" text="%table.created" prefWidth="100"/>
-                </columns>
-            </TableView>
-        </VBox>
+        <SplitPane fx:id="splitPane" dividerPositions="0.5" style="-fx-background-color: #1e1e1e;">
+            <VBox style="-fx-padding: 5;">
+                <HBox spacing="5" style="-fx-padding: 2;">
+                    <TextField fx:id="filterId" promptText="ID" prefWidth="70"/>
+                    <TextField fx:id="filterName" promptText="Name" prefWidth="100"/>
+                    <TextField fx:id="filterX" promptText="X" prefWidth="50"/>
+                    <TextField fx:id="filterY" promptText="Y" prefWidth="50"/>
+                    <TextField fx:id="filterParticipants" promptText="Participants" prefWidth="70"/>
+                    <TextField fx:id="filterGenre" promptText="Genre" prefWidth="80"/>
+                    <TextField fx:id="filterAlbum" promptText="Album" prefWidth="100"/>
+                    <TextField fx:id="filterSales" promptText="Sales" prefWidth="60"/>
+                    <TextField fx:id="filterOwner" promptText="Owner" prefWidth="80"/>
+                    <TextField fx:id="filterCreated" promptText="Created" prefWidth="100"/>
+                </HBox>
+                <TableView fx:id="bandTable" editable="false" VBox.vgrow="ALWAYS"
+                           style="-fx-background-color: #2d2d2d; -fx-table-cell-border-color: #3d3d3d;"
+                           onMouseClicked="#onTableClick">
+                    <columns>
+                        <TableColumn fx:id="colId" text="%table.id" prefWidth="70"/>
+                        <TableColumn fx:id="colName" text="%table.name" prefWidth="100"/>
+                        <TableColumn fx:id="colX" text="%table.x" prefWidth="50"/>
+                        <TableColumn fx:id="colY" text="%table.y" prefWidth="50"/>
+                        <TableColumn fx:id="colParticipants" text="%table.participants" prefWidth="70"/>
+                        <TableColumn fx:id="colGenre" text="%table.genre" prefWidth="80"/>
+                        <TableColumn fx:id="colAlbum" text="%table.album" prefWidth="100"/>
+                        <TableColumn fx:id="colSales" text="%table.sales" prefWidth="60"/>
+                        <TableColumn fx:id="colOwner" text="%table.owner" prefWidth="80"/>
+                        <TableColumn fx:id="colCreated" text="%table.created" prefWidth="100"/>
+                    </columns>
+                </TableView>
+            </VBox>
+            <StackPane fx:id="canvasContainer" style="-fx-background-color: #1e1e1e;">
+                <CollectionCanvas fx:id="collectionCanvas"/>
+            </StackPane>
+        </SplitPane>
     </center>
 
     <bottom>
