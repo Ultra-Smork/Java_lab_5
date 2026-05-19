@@ -151,7 +151,7 @@ public class AsyncServer {
 
     private void readRequest(AsynchronousSocketChannel clientChannel, String clientInfo) {
         // Create a fresh buffer for each read operation to avoid thread issues
-        ByteBuffer buffer = ByteBuffer.allocate(8192);
+        ByteBuffer buffer = ByteBuffer.allocate(131072);
 
         // Use native async read (AsynchronousSocketChannel handles internally)
         try {
@@ -219,10 +219,10 @@ public class AsyncServer {
         // Use CachedThreadPool for sending response
         responseExecutor.submit(() -> {
             try {
-                // Serialize the response
-                byte[] responseData = Serializer.serialize(response);
+                // Serialize the response with length prefix
+                byte[] responseData = Serializer.serializeWithLength(response);
 
-                // Send response back to client
+                // Send response back to client - write ALL bytes
                 ByteBuffer responseBuffer = ByteBuffer.wrap(responseData);
                 clientChannel.write(responseBuffer, responseBuffer, new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
@@ -230,8 +230,7 @@ public class AsyncServer {
                         if (buf.hasRemaining()) {
                             clientChannel.write(buf, buf, this);
                         } else {
-                            // Done writing, wait for next request from this client
-                            // Create fresh buffer for next read
+                            // All bytes written - now safe to read next request
                             readRequest(clientChannel, clientInfo);
                         }
                     }
@@ -257,7 +256,7 @@ public class AsyncServer {
     private void sendErrorResponse(AsynchronousSocketChannel clientChannel, Response response, String clientInfo) {
         responseExecutor.submit(() -> {
             try {
-                byte[] errorData = Serializer.serialize(response);
+                byte[] errorData = Serializer.serializeWithLength(response);
                 ByteBuffer errorBuffer = ByteBuffer.wrap(errorData);
                 clientChannel.write(errorBuffer);
                 closeClient(clientChannel, clientInfo);

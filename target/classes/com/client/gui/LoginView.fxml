@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.client.gui.LoginController"
+      alignment="CENTER" spacing="20"
+      style="-fx-background-color: #2d2d2d; -fx-padding: 40;"
+      prefWidth="400" prefHeight="320">
+
+    <Label fx:id="titleLabel" text="%login.title"
+           style="-fx-text-fill: #ffffff; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+
+    <VBox spacing="12" alignment="CENTER">
+        <VBox spacing="4">
+            <Label fx:id="lblUsername" text="%login.username" style="-fx-text-fill: #cccccc;"/>
+            <TextField fx:id="usernameField" promptText="%login.usernamePrompt"
+                       style="-fx-background-color: #3d3d3d; -fx-text-fill: #ffffff; -fx-prompt-text-fill: #888888;"/>
+        </VBox>
+
+        <VBox spacing="4">
+            <Label fx:id="lblPassword" text="%login.password" style="-fx-text-fill: #cccccc;"/>
+            <PasswordField fx:id="passwordField" promptText="%login.passwordPrompt"
+                           style="-fx-background-color: #3d3d3d; -fx-text-fill: #ffffff; -fx-prompt-text-fill: #888888;"/>
+        </VBox>
+    </VBox>
+
+    <VBox spacing="8" alignment="CENTER">
+        <Button fx:id="loginBtn" text="%login.loginBtn" onAction="#onLogin"
+                style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-pref-width: 180;"/>
+        <Button fx:id="registerBtn" text="%login.registerBtn" onAction="#onRegister"
+                style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-pref-width: 180;"/>
+    </VBox>
+
+    <Label fx:id="errorLabel" text="" style="-fx-text-fill: #ff5555; -fx-font-size: 12px;"/>
+</VBox>

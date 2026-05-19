@@ -10,6 +10,7 @@ import com.model.MusicBand;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 public class ScriptCommandExecutor {
@@ -59,8 +60,31 @@ public class ScriptCommandExecutor {
         try {
             return executor.apply(client, lines);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            String msg = e.getMessage();
+            return "Error: " + (msg != null ? msg : e.getClass().getSimpleName());
         }
+    }
+    
+    public CompletableFuture<String> executeAsync(AsyncClient client, String commandStr, List<String> lines) {
+        Command command = Command.fromString(commandStr);
+        if (command == null) {
+            return CompletableFuture.completedFuture("Unknown command: " + commandStr);
+        }
+        
+        BiFunction<AsyncClient, List<String>, String> executor = commands.get(command);
+        if (executor == null) {
+            return CompletableFuture.completedFuture("Unknown command: " + commandStr);
+        }
+        
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return executor.apply(client, lines);
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                String cause = msg != null ? msg : e.getClass().getSimpleName();
+                throw new RuntimeException("Error: " + cause);
+            }
+        });
     }
     
     private void checkAuth() {
@@ -71,10 +95,11 @@ public class ScriptCommandExecutor {
     
     private String sendRequest(AsyncClient client, com.common.Request request) {
         try {
-            Response resp = client.send(request);
+            Response resp = client.sendOneshot(request);
             return resp.isSuccess() ? resp.getResult() : resp.getError();
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            String msg = e.getMessage();
+            throw new RuntimeException(msg != null ? msg : e.getClass().getSimpleName());
         }
     }
     

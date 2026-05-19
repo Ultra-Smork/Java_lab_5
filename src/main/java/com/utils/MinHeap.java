@@ -2,7 +2,6 @@ package com.utils;
 
 import com.model.MusicBand;
 import com.server.DatabaseManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -62,13 +61,11 @@ public class MinHeap {
     public void loadFromDatabase() {
         rwLock.writeLock().lock();
         try {
-            ResultSet rs = DatabaseManager.executeQuery("SELECT * FROM music_bands");
+            List<MusicBand> bands = DatabaseManager.executeQueryBands("SELECT * FROM music_bands");
             heap.clear();
-            while (rs.next()) {
-                MusicBand band = resultSetToBand(rs);
+            for (MusicBand band : bands) {
                 heap.add(band);
             }
-            rs.close();
             System.out.println("Loaded " + heap.size() + " elements from database");
         } catch (SQLException e) {
             System.out.println("Error loading from database: " + e.getMessage());
@@ -188,43 +185,6 @@ public class MinHeap {
         }
         sql.append(")");
         return sql.toString();
-    }
-
-    private MusicBand resultSetToBand(ResultSet rs) throws SQLException {
-        MusicBand band = new MusicBand();
-        band.setId(rs.getLong("id"));
-        band.setName(rs.getString("name"));
-        
-        long x = rs.getLong("x");
-        int y = rs.getInt("y");
-        if (!rs.wasNull()) {
-            band.setCoordinates(new com.model.Coordinates(x, y));
-        }
-        
-        band.setCreationDate(new java.util.Date(rs.getTimestamp("creation_date").getTime()));
-        band.setNumberOfParticipants(rs.getInt("number_of_participants"));
-        
-        String desc = rs.getString("description");
-        if (desc != null) band.setDescription(desc);
-        
-        String genre = rs.getString("genre");
-        if (genre != null) {
-            band.setGenre(com.model.MusicGenre.valueOf(genre));
-        }
-        
-        String albumName = rs.getString("album_name");
-        double albumSales = rs.getDouble("album_sales");
-        if (!rs.wasNull()) {
-            band.setBestAlbum(new com.model.Album(albumName, albumSales));
-        }
-        
-        String ownerLogin = rs.getString("owner_login");
-        if (ownerLogin != null) {
-            band.setOwnerLogin(ownerLogin);
-            band.setOwnerPasswordHash(rs.getString("owner_password_hash"));
-        }
-        
-        return band;
     }
 
     private String escapeString(String value) {

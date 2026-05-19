@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.client.gui.BandEditController"
+      spacing="8" prefWidth="420">
+    <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+
+    <HBox fx:id="idRow" spacing="8" alignment="CENTER_LEFT" managed="false" visible="false">
+        <Label fx:id="lblId" prefWidth="120"/>
+        <TextField fx:id="idField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblName" prefWidth="120"/>
+        <TextField fx:id="nameField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblCoordX" prefWidth="120"/>
+        <TextField fx:id="coordXField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblCoordY" prefWidth="120"/>
+        <TextField fx:id="coordYField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblParticipants" prefWidth="120"/>
+        <TextField fx:id="participantsField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblGenre" prefWidth="120"/>
+        <ComboBox fx:id="genreField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblDescription" prefWidth="120"/>
+        <TextField fx:id="descriptionField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblAlbumName" prefWidth="120"/>
+        <TextField fx:id="albumNameField" prefWidth="260"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="lblAlbumSales" prefWidth="120"/>
+        <TextField fx:id="albumSalesField" prefWidth="260"/>
+    </HBox>
+
+    <Label fx:id="errorLabel" textAlignment="CENTER" wrapText="true"
+           style="-fx-text-fill: #d32f2f;"/>
+
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="saveBtn" onAction="#handleSave"
+                style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="cancelBtn" onAction="#handleCancel"
+                style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+    </HBox>
+</VBox>
