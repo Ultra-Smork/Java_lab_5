@@ -1,34 +1,39 @@
 package com.commands;
-import com.utils.MinHeap;
-import com.utils.Command;
 
-/**
- * Command implementation for removing a music band from the collection by its ID.
- * This command searches for a music band with the specified ID and removes it
- * from the collection's heap data structure.
- */
-public class RemoveByIdCommand implements Command{
-    /** Reference to the singleton MinHeap instance */
-    MinHeap heap = MinHeap.getInstance();
-    
-    /**
-     * Executes the command - does nothing (use executeWithInt instead).
-     */
+import com.auth.AuthorizationService;
+import com.common.Response;
+import com.model.MusicBand;
+import com.utils.MinHeap;
+import java.util.Map;
+
+public class RemoveByIdCommand implements ServerCommand {
     @Override
-    public void execute() {}
-    
-    /**
-     * Removes a music band from the collection by its unique ID.
-     *
-     * @param elementId the unique identifier of the music band to remove
-     */
-    @Override
-    public void executeWithInt(Long elementId){
-        boolean removed = heap.removeElById(elementId);
+    public Response execute(Map<String, Object> args) {
+        if (args == null || args.get("id") == null) {
+            return Response.error("Missing ID for remove_by_id command");
+        }
+        Long id = ((Number) args.get("id")).longValue();
+        
+        String login = (String) args.get("login");
+        if (login == null) {
+            login = AuthorizationService.getCurrentLogin();
+        }
+        
+        if (login == null) {
+            return Response.error("Authentication required. Please login first.");
+        }
+        
+        MinHeap heap = MinHeap.getInstance();
+        MusicBand band = heap.findById(id);
+        if (band != null && band.getOwnerLogin() != null && !login.equals(band.getOwnerLogin())) {
+            return Response.error("You can only remove your own bands");
+        }
+        
+        boolean removed = heap.removeElById(id);
         if (removed) {
-            System.out.println("MusicBand with id " + elementId + " has been removed.");
+            return Response.success("MusicBand with id " + id + " has been removed.");
         } else {
-            System.out.println("No MusicBand found with id " + elementId + ".");
+            return Response.error("No MusicBand found with id " + id);
         }
     }
 }

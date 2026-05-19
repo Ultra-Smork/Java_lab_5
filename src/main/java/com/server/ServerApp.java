@@ -2,7 +2,6 @@ package com.server;
 
 import com.server.network.AsyncServer;
 import com.server.network.ServerRunner;
-import com.utils.MinHeap;
 
 /**
  * Entry point for starting the server.
@@ -30,11 +29,22 @@ public class ServerApp {
      * @param port The port number to listen on
      */
     public static void start(int port) {
+        if (Boolean.getBoolean("app.embedded")) {
+            DatabaseManager.setEmbeddedMode(true);
+        }
+
         System.out.println("Starting MusicBand Server on port " + port + "...");
         
-        // Initialize the MinHeap singleton (loads collection from file)
-        // This must be done before accepting client connections
-        MinHeap.getInstance();
+        // Initialize the database
+        try {
+            System.out.println("Initializing PostgreSQL database...");
+            DatabaseManager.initialize();
+            System.out.println("Database initialized successfully.");
+        } catch (java.sql.SQLException e) {
+            System.err.println("Failed to initialize database: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
         
         // Create the async server
         server = new AsyncServer(port);
@@ -46,19 +56,15 @@ public class ServerApp {
             // Start the server (non-blocking)
             server.start();
             
-            // Register shutdown hook to save collection on exit
+            // Register shutdown hook
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    // Save collection to file before shutdown
-                    System.out.println("Saving collection to file...");
-                    MinHeap.getInstance().saveToFile();
-                    
-                    if (server != null) {
+                if (server != null) {
+                    try {
                         server.stop();
-                        ServerRunner.clear();
+                    } catch (java.io.IOException e) {
+                        // ignore
                     }
-                } catch (java.io.IOException e) {
-                    // ignore
+                    ServerRunner.clear();
                 }
             }));
             
@@ -76,10 +82,6 @@ public class ServerApp {
                     Thread.currentThread().interrupt();
                 }
             }
-            
-            // Save collection before stopping
-            System.out.println("Saving collection to file...");
-            MinHeap.getInstance().saveToFile();
             
             // Stop the server
             server.stop();

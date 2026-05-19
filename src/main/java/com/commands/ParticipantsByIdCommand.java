@@ -1,47 +1,21 @@
 package com.commands;
 
-import com.utils.MinHeap;
-import com.utils.Command;
+import com.common.Response;
 import com.model.MusicBand;
+import com.utils.MinHeap;
+import java.util.Map;
 
-/**
- * Command implementation for displaying the number of participants for a specific band.
- * This command finds a music band by its ID and displays the number of participants.
- */
-public class ParticipantsByIdCommand implements Command {
-    /** Reference to the singleton MinHeap instance */
-    private MinHeap heap;
-    /** The ID of the music band to look up */
-    private Long id;
-
-    /**
-     * Constructs a ParticipantsByIdCommand with the specified band ID.
-     *
-     * @param id the unique identifier of the music band
-     */
-    public ParticipantsByIdCommand(Long id) {
-        this.heap = MinHeap.getInstance();
-        this.id = id;
-    }
-
-    /**
-     * Executes the participants_by_id command, displaying the participant count.
-     */
+public class ParticipantsByIdCommand implements ServerCommand {
     @Override
-    public void execute() {
-        MusicBand band = heap.findById(id);
-        
+    public Response execute(Map<String, Object> args) {
+        if (args == null || args.get("id") == null) {
+            return Response.error("Missing ID for participants_by_id command");
+        }
+        Long id = ((Number) args.get("id")).longValue();
+        MusicBand band = MinHeap.getInstance().findById(id);
         if (band == null) {
-            System.out.println("Error: No music band found with ID " + id);
-            return;
+            return Response.error("No MusicBand found with id " + id);
         }
-
-        Integer participants = band.getNumberOfParticipants();
-        if (participants == null) {
-            System.out.println("Error: Number of participants is not set for band with ID " + id);
-            return;
-        }
-
-        System.out.println("Number of participants for band ID " + id + ": " + participants);
+        return Response.success("Band: " + band.getName() + ", Participants: " + band.getNumberOfParticipants());
     }
 }

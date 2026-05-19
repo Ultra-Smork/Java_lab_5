@@ -35,6 +35,10 @@ public class MusicBand implements Comparable<MusicBand>, Serializable {
 		private MusicGenre genre;
         /** The best album of the music band. Cannot be null. */
         private Album bestAlbum;
+        /** The login of the user who owns this band */
+        private String ownerLogin;
+        /** The password hash of the user who owns this band */
+        private String ownerPasswordHash;
 
         /**
          * Sets the unique identifier for the music band.
@@ -238,7 +242,16 @@ public class MusicBand implements Comparable<MusicBand>, Serializable {
         sb.append(String.format("| %-12s: %-34s |\n", "Description", description != null ? description : "null"));
         sb.append(String.format("| %-12s: %-34s |\n", "Genre", genre != null ? genre : "null"));
         sb.append(String.format("| %-12s: %-34s |\n", "Best Album", bestAlbum));
+        if (ownerLogin != null) {
+            sb.append(String.format("| %-12s: %-34s |\n", "Owner", ownerLogin));
+        }
         sb.append(line);
         return sb.toString();
     }
+    
+    public String getOwnerLogin() { return ownerLogin; }
+    public void setOwnerLogin(String ownerLogin) { this.ownerLogin = ownerLogin; }
+    
+    public String getOwnerPasswordHash() { return ownerPasswordHash; }
+    public void setOwnerPasswordHash(String ownerPasswordHash) { this.ownerPasswordHash = ownerPasswordHash; }
 }

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.client.gui.CollectionCanvas?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.client.gui.MainController"
+            style="-fx-background-color: #1e1e1e;">
+
+    <top>
+        <ToolBar style="-fx-background-color: #3d3d3d;">
+            <Button fx:id="btnAdd" text="%commands.add" onAction="#onAdd"/>
+            <Button fx:id="btnAddIfMin" text="%commands.addIfMin" onAction="#onAddIfMin"/>
+            <Button fx:id="btnUpdate" text="%commands.update" onAction="#onUpdate"/>
+            <Button fx:id="btnRemoveById" text="%commands.removeById" onAction="#onRemoveById"/>
+            <Button fx:id="btnRemoveGreater" text="%commands.removeGreater" onAction="#onRemoveGreater"/>
+            <Button fx:id="btnRemoveBestAlbum" text="%commands.removeBestAlbum" onAction="#onRemoveBestAlbum"/>
+            <Button fx:id="btnClear" text="%commands.clear" onAction="#onClear"/>
+            <Separator/>
+            <Button fx:id="btnInfo" text="%commands.info" onAction="#onInfo"/>
+            <Button fx:id="btnHelp" text="%commands.help" onAction="#onHelp"/>
+            <Button fx:id="btnHistory" text="%commands.history" onAction="#onHistory"/>
+            <Button fx:id="btnExecuteScript" text="%commands.executeScript" onAction="#onExecuteScript"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="userLabel" style="-fx-text-fill: #ffffff; -fx-font-size: 14px;"/>
+            <ComboBox fx:id="languageCombo" onAction="#onLanguageChange"
+                      style="-fx-background-color: #3d3d3d; -fx-text-fill: #ffffff;"/>
+            <Button fx:id="logoutBtn" text="%main.logout" onAction="#onLogout"
+                    style="-fx-background-color: #d32f2f; -fx-text-fill: white;"/>
+        </ToolBar>
+    </top>
+
+    <center>
+        <SplitPane fx:id="splitPane" dividerPositions="0.5" style="-fx-background-color: #1e1e1e;">
+            <VBox style="-fx-padding: 5;">
+                <HBox spacing="5" style="-fx-padding: 2;">
+                    <TextField fx:id="filterId" promptText="ID" prefWidth="70"/>
+                    <TextField fx:id="filterName" promptText="Name" prefWidth="100"/>
+                    <TextField fx:id="filterX" promptText="X" prefWidth="50"/>
+                    <TextField fx:id="filterY" promptText="Y" prefWidth="50"/>
+                    <TextField fx:id="filterParticipants" promptText="Participants" prefWidth="70"/>
+                    <TextField fx:id="filterGenre" promptText="Genre" prefWidth="80"/>
+                    <TextField fx:id="filterAlbum" promptText="Album" prefWidth="100"/>
+                    <TextField fx:id="filterSales" promptText="Sales" prefWidth="60"/>
+                    <TextField fx:id="filterOwner" promptText="Owner" prefWidth="80"/>
+                    <TextField fx:id="filterCreated" promptText="Created" prefWidth="100"/>
+                </HBox>
+                <TableView fx:id="bandTable" editable="false" VBox.vgrow="ALWAYS"
+                           style="-fx-background-color: #2d2d2d; -fx-table-cell-border-color: #3d3d3d;"
+                           onMouseClicked="#onTableClick">
+                    <columns>
+                        <TableColumn fx:id="colId" text="%table.id" prefWidth="70"/>
+                        <TableColumn fx:id="colName" text="%table.name" prefWidth="100"/>
+                        <TableColumn fx:id="colX" text="%table.x" prefWidth="50"/>
+                        <TableColumn fx:id="colY" text="%table.y" prefWidth="50"/>
+                        <TableColumn fx:id="colParticipants" text="%table.participants" prefWidth="70"/>
+                        <TableColumn fx:id="colGenre" text="%table.genre" prefWidth="80"/>
+                        <TableColumn fx:id="colAlbum" text="%table.album" prefWidth="100"/>
+                        <TableColumn fx:id="colSales" text="%table.sales" prefWidth="60"/>
+                        <TableColumn fx:id="colOwner" text="%table.owner" prefWidth="80"/>
+                        <TableColumn fx:id="colCreated" text="%table.created" prefWidth="100"/>
+                    </columns>
+                </TableView>
+            </VBox>
+            <StackPane fx:id="canvasContainer" style="-fx-background-color: #1e1e1e;">
+                <CollectionCanvas fx:id="collectionCanvas"/>
+            </StackPane>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <VBox style="-fx-background-color: #2d2d2d; -fx-padding: 8;">
+            <Label fx:id="statusLabel" text="" style="-fx-text-fill: #888888; -fx-font-size: 11px; -fx-padding: 4 0 0 0;"/>
+        </VBox>
+    </bottom>
+</BorderPane>

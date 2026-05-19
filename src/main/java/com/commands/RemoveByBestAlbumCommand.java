@@ -1,34 +1,34 @@
 package com.commands;
-import com.utils.MinHeap;
-import com.utils.Command;
 
-/**
- * Command implementation for removing a music band by its best album name.
- * This command searches for a music band with the specified best album name
- * and removes the first matching element from the collection.
- */
-public class RemoveByBestAlbumCommand implements Command{
-    /** Reference to the singleton MinHeap instance */
-    MinHeap heap = MinHeap.getInstance();
-    
-    /**
-     * Executes the command - does nothing (use executeWithString instead).
-     */
+import com.auth.AuthorizationService;
+import com.common.Response;
+import com.utils.MinHeap;
+import java.util.Map;
+
+public class RemoveByBestAlbumCommand implements ServerCommand {
     @Override
-    public void execute() {}
-    
-    /**
-     * Removes the first music band with the specified best album name.
-     *
-     * @param albumName the name of the best album to search for
-     */
-    @Override
-    public void executeWithString(String albumName){
-        boolean removed = heap.removeElByBestAlbum(albumName);
-        if (removed) {
-            System.out.println("MusicBand(s) with best album '" + albumName + "' have been removed.");
+    public Response execute(Map<String, Object> args) {
+        if (args == null || args.get("album") == null) {
+            return Response.error("Missing album name for remove_any_by_best_album command");
+        }
+        String albumName = (String) args.get("album");
+        
+        String login = (String) args.get("login");
+        if (login == null) {
+            login = AuthorizationService.getCurrentLogin();
+        }
+        
+        if (login == null) {
+            return Response.error("Authentication required. Please login first.");
+        }
+        
+        MinHeap heap = MinHeap.getInstance();
+        int count = heap.removeElByBestAlbumOwned(albumName, login);
+        
+        if (count > 0) {
+            return Response.success("Removed " + count + " MusicBand(s) with best album: " + albumName);
         } else {
-            System.out.println("No MusicBand found with best album '" + albumName + "'.");
+            return Response.error("No MusicBand found with best album: " + albumName);
         }
     }
 }

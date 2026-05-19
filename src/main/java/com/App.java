@@ -1,123 +1,182 @@
 package com;
 
-import com.cli.CliRunner;
+import com.server.DatabaseManager;
 import com.server.ServerApp;
 import com.client.ClientApp;
+import com.client.gui.MainApplication;
 import com.client.network.HealthChecker;
 
-/**
- * Main entry point for the Music Band Collection application.
- * 
- * This class determines which mode to run in based on command line arguments:
- * 
- * 1. No arguments: Run in CLI mode (original local mode)
- * 2. --server: Start the server (listens for client connections)
- * 3. --client: Start the client (connects to server)
- * 4. --check-health: Check if server is running and healthy
- * 
- * Examples:
- *   java -jar app.jar                    # CLI mode
- *   java -jar app.jar --server           # Start server on port 8080
- *   java -jar app.jar --server --port 9000 # Start server on port 9000
- *   java -jar app.jar --client           # Connect to localhost:8080
- *   java -jar app.jar --client --host server1 --port 8080
- *   java -jar app.jar --check-health     # Check server health
- */
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 public class App {
-    /** Default port for server/client communication */
     private static final int DEFAULT_PORT = 8080;
-    
-    /** Default host for client to connect to */
     private static final String DEFAULT_HOST = "localhost";
 
-    /**
-     * Main entry point - determines which mode to run based on arguments.
-     * 
-     * @param args Command line arguments
-     */
+    private static Process serverProcess;
+
     public static void main(String[] args) {
-        // No arguments = run CLI mode (original behavior)
-        if (args.length == 0) {
-            CliRunner.start();
+        String host = DEFAULT_HOST;
+        int port = DEFAULT_PORT;
+        boolean localMode = false;
+        List<String> remaining = new ArrayList<>();
+
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--host") && i + 1 < args.length) {
+                host = args[++i];
+            } else if (args[i].equals("--port") && i + 1 < args.length) {
+                try {
+                    port = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid port: " + args[i]);
+                    System.exit(1);
+                }
+            } else if (args[i].equals("--local")) {
+                localMode = true;
+            } else {
+                remaining.add(args[i]);
+            }
+        }
+
+        String[] filteredArgs = remaining.toArray(new String[0]);
+
+        if (localMode) {
+            startLocal(port, filteredArgs);
             return;
         }
 
-        // First argument determines the mode
-        String mode = args[0];
+        if (filteredArgs.length == 0) {
+            MainApplication.setServerHost(host);
+            MainApplication.setServerPort(port);
+            MainApplication.main(filteredArgs);
+            return;
+        }
 
-        // Handle different modes using switch
+        String mode = filteredArgs[0];
+
         switch (mode) {
             case "--server": {
-                // Server mode - start the server
-                int port = DEFAULT_PORT;
-                
-                // Parse --port argument if present
-                for (int i = 1; i < args.length; i++) {
-                    if (args[i].equals("--port") && i + 1 < args.length) {
-                        try {
-                            port = Integer.parseInt(args[++i]);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Invalid port: " + args[i]);
-                        }
-                    }
-                }
                 ServerApp.start(port);
                 break;
             }
 
-            case "--client": {
-                // Client mode - connect to server
-                String host = DEFAULT_HOST;
-                int port = DEFAULT_PORT;
-                
-                // Parse --host and --port arguments
-                for (int i = 1; i < args.length; i++) {
-                    if (args[i].equals("--host") && i + 1 < args.length) {
-                        host = args[++i];
-                    } else if (args[i].equals("--port") && i + 1 < args.length) {
-                        try {
-                            port = Integer.parseInt(args[++i]);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Invalid port: " + args[i]);
-                        }
-                    }
-                }
+            case "--console": {
                 ClientApp.start(host, port);
                 break;
             }
 
             case "--check-health": {
-                // Health check mode - check if server is running
-                String host = DEFAULT_HOST;
-                int port = DEFAULT_PORT;
-                
-                // Parse --host and --port arguments
-                for (int i = 1; i < args.length; i++) {
-                    if (args[i].equals("--host") && i + 1 < args.length) {
-                        host = args[++i];
-                    } else if (args[i].equals("--port") && i + 1 < args.length) {
-                        try {
-                            port = Integer.parseInt(args[++i]);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Invalid port: " + args[i]);
-                            System.exit(1);
-                        }
-                    }
-                }
-                // Run health checker and exit with appropriate code
                 HealthChecker.main(new String[]{"--host", host, "--port", String.valueOf(port)});
                 break;
             }
 
             default: {
-                // Unknown mode - print usage information
                 System.out.println("Usage:");
-                System.out.println("  java -jar app.jar                    # Run in CLI mode");
-                System.out.println("  java -jar app.jar --server [--port]  # Start server");
-                System.out.println("  java -jar app.jar --client [--host] [--port] # Connect to server");
-                System.out.println("  java -jar app.jar --check-health [--host] [--port] # Check server health");
+                System.out.println("  java -jar app.jar [--host HOST] [--port PORT]");
+                System.out.println("  java -jar app.jar --console [--host HOST] [--port PORT]");
+                System.out.println("  java -jar app.jar --server [--port PORT]");
+                System.out.println("  java -jar app.jar --check-health [--host HOST] [--port PORT]");
+                System.out.println("  java -jar app.jar --local [--port PORT] [--console]");
                 System.exit(1);
             }
+        }
+    }
+
+    private static void startLocal(int port, String[] args) {
+        System.out.println("Starting in local mode with embedded H2 database...");
+
+        DatabaseManager.setEmbeddedMode(true);
+
+        try {
+            startServerProcess(port);
+        } catch (Exception e) {
+            System.err.println("Failed to start server process: " + e.getMessage());
+            return;
+        }
+
+        installSigintHandler();
+
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        boolean consoleMode = args.length > 0 && args[0].equals("--console");
+
+        if (consoleMode) {
+            ClientApp.start("localhost", port);
+        } else {
+            MainApplication.setServerHost("localhost");
+            MainApplication.setServerPort(port);
+            MainApplication.main(new String[0]);
+        }
+
+        if (serverProcess != null && serverProcess.isAlive()) {
+            serverProcess.destroy();
+        }
+    }
+
+    private static void startServerProcess(int port) throws Exception {
+        String javaHome = System.getProperty("java.home");
+        String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
+        String classpath = System.getProperty("java.class.path");
+
+        List<String> cmd = new ArrayList<>();
+        cmd.add(javaBin);
+        cmd.add("-cp");
+        cmd.add(classpath);
+        cmd.add("-Dapp.embedded=true");
+        cmd.add("com.server.ServerApp");
+        cmd.add(String.valueOf(port));
+
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
+
+        serverProcess = pb.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (serverProcess != null && serverProcess.isAlive()) {
+                serverProcess.destroy();
+            }
+        }));
+    }
+
+    private static volatile long lastSigintTime = 0;
+    private static final long FORCE_EXIT_THRESHOLD_MS = 3000;
+
+    private static void installSigintHandler() {
+        try {
+            Class<?> signalClass = Class.forName("sun.misc.Signal");
+            Class<?> handlerClass = Class.forName("sun.misc.SignalHandler");
+            Object intSignal = signalClass.getConstructor(String.class).newInstance("INT");
+            Object handler = java.lang.reflect.Proxy.newProxyInstance(
+                handlerClass.getClassLoader(),
+                new Class[]{handlerClass},
+                (proxy, method, methodArgs) -> {
+                    if (method.getName().equals("handle")) {
+                        long now = System.currentTimeMillis();
+                        if (now - lastSigintTime < FORCE_EXIT_THRESHOLD_MS) {
+                            System.out.println("\nForce exiting...");
+                            if (serverProcess != null && serverProcess.isAlive()) {
+                                serverProcess.destroy();
+                            }
+                            System.exit(0);
+                        }
+                        lastSigintTime = now;
+                        System.out.println("\n[Server stopped. GUI continues in offline mode.]");
+                        System.out.println("[Close the window to exit, or press Ctrl+C again to force quit.]");
+                    }
+                    return null;
+                }
+            );
+            signalClass.getMethod("handle", signalClass, handlerClass)
+                .invoke(null, intSignal, handler);
+        } catch (Exception e) {
+            System.err.println("Warning: Could not install Ctrl+C handler: " + e.getMessage());
         }
     }
 }

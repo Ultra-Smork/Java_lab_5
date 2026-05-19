@@ -47,6 +47,12 @@ public class Response implements Serializable {
     private Serializable data;
 
     /**
+     * Notification message to display to other clients.
+     * This is set when another client modifies the collection.
+     */
+    private String notification;
+
+    /**
      * Default constructor required for deserialization.
      * Creates an empty Response that must be populated later.
      */
@@ -140,4 +146,13 @@ public class Response implements Serializable {
 
     public Serializable getData() { return data; }
     public void setData(Serializable data) { this.data = data; }
+
+    public String getNotification() { return notification; }
+    public void setNotification(String notification) { this.notification = notification; }
+
+    public static Response notification(String message) {
+        Response resp = new Response(true, null);
+        resp.setNotification(message);
+        return resp;
+    }
 }
