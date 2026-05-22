@@ -7,36 +7,42 @@ public class HelpCommand implements ServerCommand {
     @Override
     public Response execute(Map<String, Object> args) {
         String help = 
-            "=== MUSIC BAND COLLECTION COMMANDS ===\n\n" +
-            "AUTHENTICATION (no login required):\n" +
-            "  register <login> <password>    - Create a new user account\n" +
-            "  login <login> <password>      - Authenticate to access modify commands\n\n" +
-            
-            "VIEW COMMANDS (no login required):\n" +
-            "  show                         - Display all music bands sorted by name\n" +
-            "  info                         - Display collection information\n" +
-            "  help                         - Display this help message\n" +
-            "  history                      - Display command history\n" +
-            "  count_by_number_of_participants <count> - Count bands with N participants\n" +
-            "  participants_by_id <id>     - Show participants for band with ID\n" +
-            "  average_of_number_of_participants - Show average participants count\n\n" +
-            
-            "MODIFY COMMANDS (login required, modify own bands only):\n" +
-            "  add                          - Add a new music band (interactive)\n" +
-            "  add_if_min <id>              - Add band if ID is less than minimum\n" +
-            "  update id <id>              - Update band with specified ID\n" +
-            "  remove_by_id <id>           - Remove band with specified ID\n" +
-            "  remove_greater <id>         - Remove bands with ID greater than N\n" +
-            "  remove_any_by_best_album <album> - Remove bands with specified album\n" +
-            "  clear                       - Remove all your bands from collection\n" +
-            "  execute_script <file_path>  - Execute commands from script file\n\n" +
-            
-            "EXAMPLES:\n" +
-            "  register alice password123   - Create user 'alice'\n" +
-            "  login alice password123      - Login as alice\n" +
-            "  add                         - Add a new band (interactive)\n" +
-            "  update id 123               - Update band with ID 123\n" +
-            "  execute_script ~/scripts.txt - Run commands from file\n";
+            """
+            ╔═══════════════════════════════════════════╗
+            ║       MUSIC BAND COLLECTION — HELP       ║
+            ╚═══════════════════════════════════════════╝
+
+            ─── TABLE ───
+            Double-click a row → view full band details
+            Click column headers → sort asc/desc
+            Filter fields above table → narrow results
+
+            ─── CANVAS (right panel) ───
+            Hover a dot → tooltip with band name + owner
+            Click a dot → info dialog with full details
+            Colors = different owners, size = participants
+
+            ─── TOOLBAR BUTTONS ───
+            Add             → create a new band (dialog)
+            Add If Min      → add band only if it's the smallest
+            Update          → modify a band (select row first)
+            Remove by ID    → delete band by number
+            Remove Greater  → delete all your bands with ID > N
+            Remove by Album → delete bands matching album name
+            Clear           → delete ALL your bands
+            Info            → collection stats (count, type, date)
+            History         → last 11 commands executed
+            Execute Script  → run commands from a .txt file
+
+            ─── ACCOUNT ───
+            Logout (red)    → return to login screen
+            Language menu   → switch UI language on the fly
+
+            ─── TIPS ───
+            • You can only modify bands you created
+            • ID must be a positive integer
+            • Coordinates: X ≤ 554, Y ≤ 782
+            """;
         return Response.success(help);
     }
 }

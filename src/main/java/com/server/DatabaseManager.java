@@ -9,11 +9,9 @@ import java.util.Arrays;
 import java.util.List;
 
 public class DatabaseManager {
-    private static final String DEFAULT_URL = "postgresql://s410022:kGwQIW2srjmKk48W@127.0.0.1:5432/studs";
+    private static final String DEFAULT_URL = "postgresql://localhost:5432/postgres?user=postgres";
     private static String databaseUrl;
     private static DatabaseManager instance;
-    private static boolean embeddedMode = false;
-    private static final String EMBEDDED_JDBC_URL = "jdbc:h2:file:./data/localdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
 
     private DatabaseManager() {
     }
@@ -36,56 +34,23 @@ public class DatabaseManager {
         return databaseUrl;
     }
 
-    public static void setEmbeddedMode(boolean enabled) {
-        embeddedMode = enabled;
-    }
-
-    public static boolean isEmbeddedMode() {
-        return embeddedMode;
-    }
-
     private static Connection getConnection() throws SQLException {
-        if (embeddedMode) {
-            return DriverManager.getConnection(EMBEDDED_JDBC_URL);
-        }
         String url = getDatabaseUrl();
-        String jdbcUrl = buildJdbcUrl(url);
-        String[] creds = extractCredentials(url);
-        return DriverManager.getConnection(jdbcUrl, creds[0], creds[1]);
+        if (url.startsWith("postgresql://")) {
+            return DriverManager.getConnection(zbuildJdbcUrl(url));
+        }
+        return DriverManager.getConnection(url);
     }
 
-    private static String buildJdbcUrl(String postgresqlUrl) {
-        int atIndex = postgresqlUrl.indexOf('@');
-        String afterAt = postgresqlUrl.substring(atIndex + 1);
-
-        int colonIndex = afterAt.indexOf(':');
-        int slashIndex = afterAt.indexOf('/');
-
-        String hostPort = afterAt.substring(0, colonIndex);
-        String database = afterAt.substring(slashIndex + 1);
-
-        return "jdbc:postgresql://" + hostPort + "/" + database;
-    }
-
-    private static String[] extractCredentials(String postgresqlUrl) {
-        int atIndex = postgresqlUrl.indexOf('@');
-        String beforeAt = postgresqlUrl.substring("postgresql://".length(), atIndex);
-        String[] parts = beforeAt.split(":");
-
-        String user = parts[0];
-        String password = parts[1];
-        return new String[]{user, password};
+    private static String buildJdbcUrl(String pgUrl) {
+        return "jdbc:" + pgUrl;
     }
 
     public static void initialize() throws SQLException {
         try {
-            if (embeddedMode) {
-                Class.forName("org.h2.Driver");
-            } else {
-                Class.forName("org.postgresql.Driver");
-            }
+            Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
-            System.err.println("Database driver not found: " + e.getMessage());
+            System.err.println("PostgreSQL driver not found: " + e.getMessage());
         }
         runMigrations();
     }
@@ -94,12 +59,11 @@ public class DatabaseManager {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
-            String suffix = embeddedMode ? "_h2" : "";
             List<String> migrationFiles = Arrays.asList(
-                "V1__initial_schema" + suffix + ".sql",
-                "V2__create_genre_table" + suffix + ".sql",
-                "V3__command_history" + suffix + ".sql",
-                "V4__users_table" + suffix + ".sql"
+                "V1__initial_schema.sql",
+                "V2__create_genre_table.sql",
+                "V3__command_history.sql",
+                "V4__users_table.sql"
             );
 
             for (String migrationFile : migrationFiles) {
@@ -108,17 +72,7 @@ public class DatabaseManager {
                     InputStream is = DatabaseManager.class.getClassLoader().getResourceAsStream(migrationFile);
                     if (is == null) {
                         System.out.println("Migration file not found in classpath: " + migrationFile);
-                        if (suffix.isEmpty()) {
-                            System.out.println("Skipping missing migration: " + migrationFile);
-                            continue;
-                        }
-                        String fallback = migrationFile.replace("_h2.sql", ".sql");
-                        System.out.println("Trying fallback: " + fallback);
-                        is = DatabaseManager.class.getClassLoader().getResourceAsStream(fallback);
-                        if (is == null) {
-                            System.out.println("Fallback not found either, skipping");
-                            continue;
-                        }
+                        continue;
                     }
                     String sql = new String(is.readAllBytes());
                     is.close();

@@ -26,18 +26,19 @@ public class ServerApp {
     /**
      * Starts the server on the specified port.
      * 
-     * @param port The port number to listen on
+     * @param port    The port number to listen on
+     * @param jdbcUrl Optional JDBC connection string, or null for default
      */
-    public static void start(int port) {
-        if (Boolean.getBoolean("app.embedded")) {
-            DatabaseManager.setEmbeddedMode(true);
+    public static void start(int port, String jdbcUrl) {
+        if (jdbcUrl != null && !jdbcUrl.isEmpty()) {
+            DatabaseManager.setDatabaseUrl(jdbcUrl);
         }
 
         System.out.println("Starting MusicBand Server on port " + port + "...");
+        System.out.println("Database: " + DatabaseManager.getDatabaseUrl());
         
         // Initialize the database
         try {
-            System.out.println("Initializing PostgreSQL database...");
             DatabaseManager.initialize();
             System.out.println("Database initialized successfully.");
         } catch (java.sql.SQLException e) {
@@ -100,16 +101,24 @@ public class ServerApp {
      */
     public static void main(String[] args) {
         int port = DEFAULT_PORT;
+        String jdbcUrl = null;
         
-        // Parse port from command line
-        if (args.length > 0) {
-            try {
-                port = Integer.parseInt(args[0]);
-            } catch (NumberFormatException e) {
-                System.err.println("Invalid port: " + args[0] + ", using default " + DEFAULT_PORT);
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--port") && i + 1 < args.length) {
+                try {
+                    port = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid port: " + args[i]);
+                }
+            } else if (args[i].equals("--jdbc") && i + 1 < args.length) {
+                jdbcUrl = args[++i];
+            } else if (i == 0) {
+                try {
+                    port = Integer.parseInt(args[i]);
+                } catch (NumberFormatException ignored) {}
             }
         }
         
-        start(port);
+        start(port, jdbcUrl);
     }
 }

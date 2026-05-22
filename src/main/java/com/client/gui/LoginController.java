@@ -62,9 +62,14 @@ public class LoginController {
         executor.submit(() -> {
             try {
                 if (client == null || !client.isConnected()) {
-                    client = new AsyncClient(MainApplication.getServerHost(), MainApplication.getServerPort());
-                    if (!client.connect()) {
-                        Platform.runLater(() -> showError(LocalizationManager.get("login.connectionError")));
+                    try {
+                        client = new AsyncClient(MainApplication.getServerHost(), MainApplication.getServerPort());
+                        client.connect();
+                    } catch (IOException e) {
+                        Platform.runLater(() -> {
+                            showError(LocalizationManager.get("login.connectionError"));
+                            setButtonsEnabled(true);
+                        });
                         return;
                     }
                 }
@@ -85,7 +90,8 @@ public class LoginController {
                             showError(LocalizationManager.get("login.windowError"));
                         }
                     } else {
-                        showError(resp.getError() != null ? resp.getError() : LocalizationManager.get("login.error"));
+                        String err = resp.getError();
+                        showError(err != null ? err : LocalizationManager.get("login.error"));
                         setButtonsEnabled(true);
                     }
                 });
@@ -114,9 +120,14 @@ public class LoginController {
         executor.submit(() -> {
             try {
                 if (client == null || !client.isConnected()) {
-                    client = new AsyncClient(MainApplication.getServerHost(), MainApplication.getServerPort());
-                    if (!client.connect()) {
-                        Platform.runLater(() -> showError(LocalizationManager.get("login.connectionError")));
+                    try {
+                        client = new AsyncClient(MainApplication.getServerHost(), MainApplication.getServerPort());
+                        client.connect();
+                    } catch (IOException e) {
+                        Platform.runLater(() -> {
+                            showError(LocalizationManager.get("login.connectionError"));
+                            setButtonsEnabled(true);
+                        });
                         return;
                     }
                 }
@@ -137,7 +148,8 @@ public class LoginController {
                             showError(LocalizationManager.get("login.windowError"));
                         }
                     } else {
-                        showError(resp.getError() != null ? resp.getError() : LocalizationManager.get("login.register.error"));
+                        String err = resp.getError();
+                        showError(err != null ? err : LocalizationManager.get("login.register.error"));
                         setButtonsEnabled(true);
                     }
                 });
@@ -157,6 +169,8 @@ public class LoginController {
     private void setButtonsEnabled(boolean enabled) {
         usernameField.setDisable(!enabled);
         passwordField.setDisable(!enabled);
+        loginBtn.setDisable(!enabled);
+        registerBtn.setDisable(!enabled);
     }
 
     public AsyncClient getClient() {
